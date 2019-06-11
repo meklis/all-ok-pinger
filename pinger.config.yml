@@ -1,10 +1,22 @@
-global:
+system:
+#Какой таймаут делать между пингами
   sleep_after_check: 10s
+#Идентификация пингера
   pinger_ident: TEST-PINGER-UKRAINE
+#Конфигурация логгера
+  logger:
+     console:
+        enabled: true
+        enable_color: true
+        log_level: 6
 
+#Конфигруция апи
 api:
+#Адрес получения списка на пинг
   host_list_addr: http://127.0.0.1:8081/pinger/get
+#Адрес отправки изменений
   report_addr: http://127.0.0.1:8081/pinger/update
+#Таймаут ожидания
   request_timeout: 30s
 
 
