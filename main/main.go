@@ -1,51 +1,75 @@
 package main
 
 import (
-	"flag"
+	api_module "bitbucket.org/meklis/helpprovider-gopinger/api"
+	pinger_module "bitbucket.org/meklis/helpprovider-gopinger/pinger"
 	"bitbucket.org/meklis/helpprovider_snmp/logger"
-	"gopkg.in/yaml.v2"
+	"flag"
 	"fmt"
-	"os"
+	"github.com/ztrue/tracerr"
+	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"log"
-    api_module "bitbucket.org/meklis/helpprovider-gopinger/api"
-	pinger_module "bitbucket.org/meklis/helpprovider-gopinger/pinger"
+	"os"
 	"time"
-	"github.com/ztrue/tracerr"
 )
 
 var (
 	pathConfig string
-	Config Configuration
-	lg *logger.Logger
+	Config     Configuration
+	lg         *logger.Logger
 )
+
 const (
 	VERSION = "0.2"
 )
 
-func init()  {
+func init() {
 	flag.StringVar(&pathConfig, "c", "pinger.config.yml", "Path to configuration file  ")
 	flag.Parse()
+}
+
+type Configuration struct {
+	System ConfigurationSystem         `yaml:"system"`
+	Api    ConfigurationApi            `yaml:"api"`
+	Pinger pinger_module.Configuration `yaml:"pinger"`
+}
+
+type ConfigurationSystem struct {
+	SleepAfterCheck time.Duration `yaml:"sleep_after_check"`
+	PingerIdent     string        `yaml:"pinger_ident"`
+	Logger          struct {
+		Console struct {
+			Enabled      bool `yaml:"enabled"`
+			EnabledColor bool `yaml:"enable_color"`
+			LogLevel     int  `yaml:"log_level"`
+		} `yaml:"console"`
+	} `yaml:"logger"`
+}
+type ConfigurationApi struct {
+	HostListAddr   string        `yaml:"host_list_addr"`
+	ReportAddr     string        `yaml:"report_addr"`
+	RequestTimeout time.Duration `yaml:"request_timeout"`
 }
 
 func main() {
 	//Load configuration
 	if err := LoadConfig(); err != nil {
-		log.Panicln("ERROR LOADING CONFIGURATION FILE: ",err.Error())
+		log.Panicln("ERROR LOADING CONFIGURATION FILE: ", err.Error())
 		os.Exit(1)
 	}
 	//Initialize logger
 	InitializeLogger()
 
 	api := api_module.NewApi(api_module.Configuration{
-		PingerIdent: Config.System.PingerIdent,
+		PingerIdent:    Config.System.PingerIdent,
 		RequestTimeout: Config.Api.RequestTimeout,
-		HostListAddr: Config.Api.HostListAddr,
-		ReportAddr: Config.Api.ReportAddr,
+		HostListAddr:   Config.Api.HostListAddr,
+		ReportAddr:     Config.Api.ReportAddr,
 	})
 	err, pinger := pinger_module.NewPinger(Config.Pinger, lg)
 	if err != nil {
-		log.Panicln("ERROR INITIALIZE PINGER: ",err.Error())
+		log.Panicln("ERROR INITIALIZE PINGER: ", err.Error())
 		os.Exit(1)
 	}
 
@@ -70,17 +94,16 @@ func main() {
 
 }
 
-
 func LoadConfig() error {
 	bytes, err := ioutil.ReadFile(pathConfig)
 	if err != nil {
-		return  err
+		return err
 	}
-	err  = yaml.Unmarshal(bytes, &Config)
+	err = yaml.Unmarshal(bytes, &Config)
 	if err != nil {
-		return  err
+		return err
 	}
-	return  nil
+	return nil
 }
 func PrintStarted() {
 	fmt.Printf(`
@@ -102,6 +125,6 @@ func InitializeLogger() {
 			lg.SetFormat("#%{id} %{time} (%{filename}:%{line}) > %{level} %{message}")
 		}
 	} else {
-		lg, _ = logger.New("no_log",0, os.DevNull)
+		lg, _ = logger.New("no_log", 0, os.DevNull)
 	}
 }
