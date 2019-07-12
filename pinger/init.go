@@ -83,7 +83,7 @@ func (c *Pinger) StartPing(data []Device) (resp []Device) {
 		for ip, inspections := range forDown {
 			c.chanTcpReq <- Device{
 				Ip:     ip,
-				Status: inspections,
+				Status: int((inspections / c.Config.ICMP.NumberOfInspection) * 100),
 			}
 		}
 		//Waiting for all host will be received to workers
