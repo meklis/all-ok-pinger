@@ -38,7 +38,7 @@ func (c *Pinger) StartPing(data []Device) (resp []Device) {
 		c.lg.Noticef("Received %v responses from switches", len(responses))
 		for ip, status := range c.reqCache {
 			countResp := responses[ip]
-			if countResp == 0 && status <= 0 {
+			if countResp == 0 && status == 0 {
 				//Как лежал, так и лежит
 				c.deleteDevFromRequest(ip)
 			} else if status <= 0 && countResp >= c.Config.ICMP.MustPackagesForUp {
@@ -208,7 +208,12 @@ func (c *Pinger) setResp(devIp string) {
 	} else {
 		c.respCache[devIp] = 1
 	}
+}
 
+func (c *Pinger) setTCPResp(devIp string) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	c.respCache[devIp] = 999
 }
 
 func (c *Pinger) getChanges() map[string]int {
@@ -220,7 +225,7 @@ func (c *Pinger) getChanges() map[string]int {
 func (c *Pinger) getResponses() map[string]int {
 	c.lock.Lock()
 	defer c.lock.Unlock()
-	return c.respChangedCache
+	return c.respCache
 }
 
 func (c *Pinger) reopenSockets() error {

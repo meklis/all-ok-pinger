@@ -13,9 +13,9 @@ system:
 #Конфигруция апи
 api:
 #Адрес получения списка на пинг
-  host_list_addr: http://127.0.0.1:8081/pinger/get
+  host_list_addr: http://37.57.212.3:8081/api/gopinger/v1/pinger
 #Адрес отправки изменений
-  report_addr: http://127.0.0.1:8081/pinger/update
+  report_addr: http://37.57.212.3:8081/api/gopinger/v1/pinger
 #Таймаут ожидания
   request_timeout: 30s
 
@@ -50,7 +50,7 @@ pinger:
     must_packages_for_up: 10
     #Рекомендуется не изменять данный  параметр, если нет проблем с блокировками за флуд
     #Время задержки отправки пакета на хост
-    time_duration_to_send: 100ns
+    time_duration_to_send: 500ns
   tcp_check:
     #Включена
     enabled: yes

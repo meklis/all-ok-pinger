@@ -1,10 +1,10 @@
 package api
 
 import (
-	"time"
-	"github.com/imroc/req"
 	"bitbucket.org/meklis/helpprovider-gopinger/pinger"
+	"github.com/imroc/req"
 	"github.com/ztrue/tracerr"
+	"time"
 )
 
 type Configuration struct {
@@ -15,24 +15,24 @@ type Configuration struct {
 }
 
 type API struct {
-	Config Configuration
+	Config  Configuration
 	headers req.Header
 }
 
 func (c *API) GetHosts() ([]pinger.Device, error) {
-	resp, err := req.Get(c.Config.HostListAddr + "?ident=" + c.Config.PingerIdent, c.headers)
+	resp, err := req.Get(c.Config.HostListAddr+"?ident="+c.Config.PingerIdent, c.headers)
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
 	devices := make([]pinger.Device, 0)
-	if err := resp.ToJSON(devices); err != nil {
-		return nil,  tracerr.Wrap(err)
+	if err := resp.ToJSON(&devices); err != nil {
+		return nil, tracerr.Wrap(err)
 	}
 	return devices, nil
 }
 
-func (c *API) SendUpdate(dev []pinger.Device) (error) {
-	resp, err := req.Post(c.Config.HostListAddr + "?ident=" + c.Config.PingerIdent,  req.BodyJSON(dev), c.headers)
+func (c *API) SendUpdate(dev []pinger.Device) error {
+	resp, err := req.Post(c.Config.HostListAddr+"?ident="+c.Config.PingerIdent, req.BodyJSON(dev), c.headers)
 	if err != nil {
 		return tracerr.Wrap(err)
 	}
@@ -42,9 +42,7 @@ func (c *API) SendUpdate(dev []pinger.Device) (error) {
 	return nil
 }
 
-
-
-func NewApi(conf Configuration) (*API) {
+func NewApi(conf Configuration) *API {
 	req.SetTimeout(conf.RequestTimeout)
 	api := new(API)
 	api.Config = conf
