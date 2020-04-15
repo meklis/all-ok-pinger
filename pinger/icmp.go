@@ -21,7 +21,6 @@ const (
 func (c *Pinger) writeSocket() {
 	for {
 		dev := <-c.chanReq
-		c.setTimeStart(dev.Ip)
 		if strings.Contains(dev.Ip, ".") {
 			for i := 0; i < c.Config.ICMP.CountPackagesToHost; i++ {
 				//Создадим ICMP пакет
@@ -43,6 +42,7 @@ func (c *Pinger) writeSocket() {
 
 				//Закидываем пакет в сокет
 				prom.CountPingPackagesInc(dev.Ip)
+				c.setTimeStart(dev.Ip)
 				if _, err := c.icmpSocket.WriteTo(wb, &net.IPAddr{IP: net.ParseIP(dev.Ip)}); err != nil {
 					c.lg.Errorf("Problem write to ICMP socket: %v", err)
 					time.Sleep(time.Millisecond * 10)
