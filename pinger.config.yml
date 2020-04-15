@@ -10,28 +10,35 @@ system:
         enable_color: true
         log_level: 6
 
+prometheus:
+  path: /metrics
+  enabled: true
+  port: 2112
+
 #Конфигруция апи
 api:
 #Адрес получения списка на пинг
-  host_list_addr: http://37.57.212.3:8081/api/gopinger/v1/pinger
+  host_list_addr: https://apiv2.golden.net.ua/v2/trusted/equipment/pinger
 #Адрес отправки изменений
-  report_addr: http://37.57.212.3:8081/api/gopinger/v1/pinger
+  report_addr: https://apiv2.golden.net.ua/v2/trusted/equipment/pinger
 #Таймаут ожидания
   request_timeout: 30s
 
 
 #Конфигурация библиотеки пингера
 pinger:
+  #Fast mode
+  fast_mode: no
   #Приблизительное количество хостов(устанавливает размер хеша). Нужно брать с небольшим запасом, +1000 например
   approximate_host_quantity: 30000
   #Настройки ICMP проверки
   icmp_check:
     #Количество проходов
-    number_of_inspection: 5
+    number_of_inspection: 2
     #Количество успешных проходов(хост ответил на пинг нужным количеством пакетов за проход) и считается работающим
-    must_inspections_success_for_up: 4
+    must_inspections_success_for_up: 2
     #Количество неуспешных проходов(хост НЕ ответил на пинг нужным количеством пакетов за проход) и считается упавшим
-    must_inspections_failed_for_down: 4
+    must_inspections_failed_for_down: 1
     #Количество воркеров, читающих ответы
     count_listeners: 4
     #Количество воркеров, генерирующие пакеты
@@ -39,31 +46,31 @@ pinger:
     #Работать с IPv6 хостами (будет открыт еще один сокет)
     enable_ipv6: yes
     #Ожидание задержавшихся ответов после отправки всех пакетов
-    response_timeout: 3s
+    response_timeout: 2s
     #Задержка между проходами
-    inspection_timeout: 100ms
+    inspection_timeout: 10ms
     #Количество пакетов на хост при проходе инспекции. Принцип работы аналогичен fping
     #Рекомендуется не изменять данный  параметр, если нет проблем с блокировками за флуд
-    count_packages_to_host: 15
+    count_packages_to_host: 5
     #Рекомендуется не изменять данный  параметр, если нет проблем с блокировками за флуд
     #Необходимое количетво полученных пакетов для учета хоста в обходе как успешного
-    must_packages_for_up: 10
+    must_packages_for_up: 2
     #Рекомендуется не изменять данный  параметр, если нет проблем с блокировками за флуд
     #Время задержки отправки пакета на хост
-    time_duration_to_send: 500ns
+    time_duration_to_send: 7000ns
   tcp_check:
     #Включена
-    enabled: yes
-    #Список портов на проверку. Задержка проверки высчитывается по count(ports)*connect_timeout, соответственно 4*3s = 12s ожидания
+    enabled: no
+    #Список портов на проверку. Задержка проверки высчитывается по count(ports)*connect_timeout, соответственно 4 порта *3s = 12s ожидания
     ports:
       - 22
       - 21
       - 443
       - 80
     #Количество обработчиков TCP подключений
-    count_workers: 150
+    count_workers: 50
     #Время ожидания на установку подключения
-    connect_timeout: 3s
+    connect_timeout: 5s
 
 
 

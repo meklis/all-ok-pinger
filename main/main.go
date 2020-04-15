@@ -3,14 +3,18 @@ package main
 import (
 	api_module "bitbucket.org/meklis/helpprovider-gopinger/api"
 	pinger_module "bitbucket.org/meklis/helpprovider-gopinger/pinger"
+	"bitbucket.org/meklis/helpprovider-gopinger/prom"
 	"bitbucket.org/meklis/helpprovider_snmp/logger"
 	"flag"
 	"fmt"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/ztrue/tracerr"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"log"
+	"net/http"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -22,6 +26,7 @@ var (
 
 const (
 	VERSION = "0.2"
+	BUILD_DATE = "2020-04-15 19:30"
 )
 
 func init() {
@@ -33,7 +38,13 @@ type Configuration struct {
 	System ConfigurationSystem         `yaml:"system"`
 	Api    ConfigurationApi            `yaml:"api"`
 	Pinger pinger_module.Configuration `yaml:"pinger"`
+	Prometheus struct {
+		Enabled                 bool              `yaml:"enabled"`
+		Port                    int               `yaml:"port"`
+		Path                    string            `yaml:"path"`
+	} `yaml:"prometheus"`
 }
+
 
 type ConfigurationSystem struct {
 	SleepAfterCheck time.Duration `yaml:"sleep_after_check"`
@@ -54,12 +65,27 @@ type ConfigurationApi struct {
 
 func main() {
 	//Load configuration
-	if err := LoadConfig(); err != nil {
+	if err := LoadConfig(pathConfig, &Config); err != nil {
 		log.Panicln("ERROR LOADING CONFIGURATION FILE: ", err.Error())
 		os.Exit(1)
 	}
 	//Initialize logger
 	InitializeLogger()
+
+
+	//Initialize prometheus
+	if Config.Prometheus.Enabled {
+		prom.PromEnabled = true
+		lg.NoticeF("Exporter for prometheus is enabled...")
+		http.Handle(Config.Prometheus.Path, promhttp.Handler())
+		go func() {
+			err := http.ListenAndServe(fmt.Sprintf(":%v", Config.Prometheus.Port), nil)
+			lg.CriticalF("Prometheus exporter critical err: %v", err)
+			panic(err)
+		}()
+		lg.NoticeF("Prometheus exporter started on 0.0.0.0:%v%v", Config.Prometheus.Port, Config.Prometheus.Path)
+		prom.SysInfo(VERSION, BUILD_DATE)
+	}
 
 	api := api_module.NewApi(api_module.Configuration{
 		PingerIdent:    Config.System.PingerIdent,
@@ -80,7 +106,10 @@ func main() {
 			time.Sleep(time.Second * 10)
 			continue
 		}
+		start_dur := time.Now().UnixNano()
 		responses := pinger.StartPing(devices)
+		prom.CicleTimeAdd(float64(time.Now().UnixNano() - start_dur) / float64(time.Second))
+		prom.CountCiclesInc()
 		if len(responses) != 0 {
 			err := api.SendUpdate(responses)
 			if err != nil {
@@ -94,17 +123,26 @@ func main() {
 
 }
 
-func LoadConfig() error {
-	bytes, err := ioutil.ReadFile(pathConfig)
+func LoadConfig(path string, Config *Configuration) error {
+	bytes, err := ioutil.ReadFile(path)
 	if err != nil {
 		return err
 	}
-	err = yaml.Unmarshal(bytes, &Config)
+	yamlConfig := string(bytes)
+	for _, e := range os.Environ() {
+		pair := strings.SplitN(e, "=", 2)
+		yamlConfig = strings.ReplaceAll(yamlConfig, fmt.Sprintf("${%v}", pair[0]), pair[1])
+	}
+	err = yaml.Unmarshal([]byte(yamlConfig), &Config)
+	fmt.Printf(`Loaded configuration from %v with env readed:
+%v
+`, path, yamlConfig)
 	if err != nil {
 		return err
 	}
 	return nil
 }
+
 func PrintStarted() {
 	fmt.Printf(`
 Started GOPINGER

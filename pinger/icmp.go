@@ -1,6 +1,7 @@
 package pinger
 
 import (
+	"bitbucket.org/meklis/helpprovider-gopinger/prom"
 	"golang.org/x/net/icmp"
 	"golang.org/x/net/ipv4"
 	"golang.org/x/net/ipv6"
@@ -20,6 +21,7 @@ const (
 func (c *Pinger) writeSocket() {
 	for {
 		dev := <-c.chanReq
+		c.setTimeStart(dev.Ip)
 		if strings.Contains(dev.Ip, ".") {
 			for i := 0; i < c.Config.ICMP.CountPackagesToHost; i++ {
 				//Создадим ICMP пакет
@@ -40,6 +42,7 @@ func (c *Pinger) writeSocket() {
 				}
 
 				//Закидываем пакет в сокет
+				prom.CountPingPackagesInc(dev.Ip)
 				if _, err := c.icmpSocket.WriteTo(wb, &net.IPAddr{IP: net.ParseIP(dev.Ip)}); err != nil {
 					c.lg.Errorf("Problem write to ICMP socket: %v", err)
 					time.Sleep(time.Millisecond * 10)
@@ -64,6 +67,7 @@ func (c *Pinger) writeSocket() {
 				}
 
 				//Закидываем пакет в сокет
+				prom.CountPingPackagesInc(dev.Ip)
 				if _, err := c.icmp6Socket.WriteTo(wb, &net.IPAddr{IP: net.ParseIP(dev.Ip)}); err != nil {
 					c.lg.Errorf("Problem write to ICMP6 socket: %v", err)
 					time.Sleep(time.Millisecond * 10)
@@ -96,6 +100,8 @@ func (c *Pinger) readSocket() {
 
 		switch rm.Type {
 		case ipv4.ICMPTypeEchoReply:
+			prom.CountPongPackagesInc(peer.String())
+			c.setTimeStop(peer.String())
 			c.setResp(peer.String())
 		case ipv4.ICMPTypeParameterProblem:
 			c.lg.InfoF("ICMPParameterProblem message from peer %v", peer.String())
@@ -129,6 +135,8 @@ func (c *Pinger) readSocket6() {
 		//Обрабатываем результат
 		switch rm.Type {
 		case ipv6.ICMPTypeEchoReply:
+			prom.CountPongPackagesInc(peer.String())
+			c.setTimeStop(peer.String())
 			c.setResp(peer.String())
 		case ipv6.ICMPTypeParameterProblem:
 			c.lg.InfoF("ICMP6ParameterProblem message from peer %v", peer.String())

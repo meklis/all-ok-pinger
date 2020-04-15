@@ -18,17 +18,24 @@ type API struct {
 	Config  Configuration
 	headers req.Header
 }
+type ApiResponse struct {
+	StatusCode int `json:"statusCode"`
+	Meta       struct {
+		Count int `json:"count"`
+	} `json:"meta"`
+	Data []pinger.Device `json:"data"`
+}
 
 func (c *API) GetHosts() ([]pinger.Device, error) {
 	resp, err := req.Get(c.Config.HostListAddr+"?ident="+c.Config.PingerIdent, c.headers)
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
-	devices := make([]pinger.Device, 0)
-	if err := resp.ToJSON(&devices); err != nil {
+	data := ApiResponse{}
+	if err := resp.ToJSON(&data); err != nil {
 		return nil, tracerr.Wrap(err)
 	}
-	return devices, nil
+	return data.Data, nil
 }
 
 func (c *API) SendUpdate(dev []pinger.Device) error {

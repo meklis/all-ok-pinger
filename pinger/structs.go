@@ -10,18 +10,26 @@ import (
 type Pinger struct {
 	lg               *logger.Logger
 	Config           Configuration
+	PrometheusEnabled bool
 	reqCache         map[string]int
 	respChangedCache map[string]int
 	respCache        map[string]int
 	chanReq          chan Device
 	chanTcpReq       chan Device
+	icmpTiming  map[string]IcmpTiming
 	icmpSocket       *icmp.PacketConn
 	icmp6Socket      *icmp.PacketConn
-
-	lock *sync.Mutex
+	sync.Mutex
 }
 
+type IcmpTiming struct {
+	Start int64
+	Stop int64
+}
+
+
 type Configuration struct {
+	FastMode					bool 			`yaml:"fast_mode"`
 	ICMP                    ConfigurationIcmpCheck `yaml:"icmp_check"`
 	TCP                     ConfigurationTcpCheck  `yaml:"tcp_check"`
 	ApproximateHostQuantity int                    `yaml:"approximate_host_quantity"`
@@ -42,7 +50,7 @@ type ConfigurationIcmpCheck struct {
 
 type ConfigurationTcpCheck struct {
 	Enable            bool          `yaml:"enabled"`
-	Ports             []int         `yaml:"check_ports"`
+	Ports             []int         `yaml:"ports"`
 	CountWorkers      int           `yaml:"count_workers"`
 	ConnectionTimeout time.Duration `yaml:"connect_timeout"`
 }
