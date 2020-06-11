@@ -1,9 +1,12 @@
 package api
 
 import (
-	"bitbucket.org/meklis/helpprovider-gopinger/pinger"
+	"crypto/tls"
 	"github.com/imroc/req"
+	"github.com/meklis/all-ok-pinger/pinger"
 	"github.com/ztrue/tracerr"
+	"net/http"
+	"net/http/cookiejar"
 	"time"
 )
 
@@ -51,6 +54,13 @@ func (c *API) SendUpdate(dev []pinger.Device) error {
 
 func NewApi(conf Configuration) *API {
 	req.SetTimeout(conf.RequestTimeout)
+	req.Client().Jar, _ = cookiejar.New(nil)
+	trans, _ := req.Client().Transport.(*http.Transport)
+	trans.MaxIdleConns = 20
+	trans.TLSHandshakeTimeout = 20 * time.Second
+	trans.DisableKeepAlives = true
+	trans.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+
 	api := new(API)
 	api.Config = conf
 	api.headers = req.Header{

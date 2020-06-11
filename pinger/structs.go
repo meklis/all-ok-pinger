@@ -1,35 +1,34 @@
 package pinger
 
 import (
-	"bitbucket.org/meklis/helpprovider_snmp/logger"
+	"github.com/meklis/all-ok-radius-server/logger"
 	"golang.org/x/net/icmp"
 	"sync"
 	"time"
 )
 
 type Pinger struct {
-	lg               *logger.Logger
-	Config           Configuration
+	lg                *logger.Logger
+	Config            Configuration
 	PrometheusEnabled bool
-	reqCache         map[string]int
-	respChangedCache map[string]int
-	respCache        map[string]int
-	chanReq          chan Device
-	chanTcpReq       chan Device
-	icmpTiming  map[string]IcmpTiming
-	icmpSocket       *icmp.PacketConn
-	icmp6Socket      *icmp.PacketConn
+	reqCache          map[string]int
+	respChangedCache  map[string]int
+	respCache         map[string]int
+	chanReq           chan Device
+	chanTcpReq        chan Device
+	icmpTiming        map[string]IcmpTiming
+	icmpSocket        *icmp.PacketConn
+	icmp6Socket       *icmp.PacketConn
 	sync.Mutex
 }
 
 type IcmpTiming struct {
 	Start int64
-	Stop int64
+	Stop  int64
 }
 
-
 type Configuration struct {
-	FastMode					bool 			`yaml:"fast_mode"`
+	FastMode                bool                   `yaml:"fast_mode"`
 	ICMP                    ConfigurationIcmpCheck `yaml:"icmp_check"`
 	TCP                     ConfigurationTcpCheck  `yaml:"tcp_check"`
 	ApproximateHostQuantity int                    `yaml:"approximate_host_quantity"`

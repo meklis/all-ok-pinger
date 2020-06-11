@@ -1,7 +1,7 @@
 package pinger
 
 import (
-	"bitbucket.org/meklis/helpprovider-gopinger/prom"
+	"github.com/meklis/all-ok-pinger/prom"
 	"golang.org/x/net/icmp"
 	"golang.org/x/net/ipv4"
 	"golang.org/x/net/ipv6"

@@ -1,12 +1,12 @@
 package main
 
 import (
-	api_module "bitbucket.org/meklis/helpprovider-gopinger/api"
-	pinger_module "bitbucket.org/meklis/helpprovider-gopinger/pinger"
-	"bitbucket.org/meklis/helpprovider-gopinger/prom"
-	"bitbucket.org/meklis/helpprovider_snmp/logger"
 	"flag"
 	"fmt"
+	api_module "github.com/meklis/all-ok-pinger/api"
+	pinger_module "github.com/meklis/all-ok-pinger/pinger"
+	"github.com/meklis/all-ok-pinger/prom"
+	"github.com/meklis/all-ok-radius-server/logger"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/ztrue/tracerr"
 	"gopkg.in/yaml.v2"
@@ -25,7 +25,7 @@ var (
 )
 
 const (
-	VERSION = "0.2"
+	VERSION    = "0.2"
 	BUILD_DATE = "2020-04-15 19:30"
 )
 
@@ -35,16 +35,15 @@ func init() {
 }
 
 type Configuration struct {
-	System ConfigurationSystem         `yaml:"system"`
-	Api    ConfigurationApi            `yaml:"api"`
-	Pinger pinger_module.Configuration `yaml:"pinger"`
+	System     ConfigurationSystem         `yaml:"system"`
+	Api        ConfigurationApi            `yaml:"api"`
+	Pinger     pinger_module.Configuration `yaml:"pinger"`
 	Prometheus struct {
-		Enabled                 bool              `yaml:"enabled"`
-		Port                    int               `yaml:"port"`
-		Path                    string            `yaml:"path"`
+		Enabled bool   `yaml:"enabled"`
+		Port    int    `yaml:"port"`
+		Path    string `yaml:"path"`
 	} `yaml:"prometheus"`
 }
-
 
 type ConfigurationSystem struct {
 	SleepAfterCheck time.Duration `yaml:"sleep_after_check"`
@@ -71,7 +70,6 @@ func main() {
 	}
 	//Initialize logger
 	InitializeLogger()
-
 
 	//Initialize prometheus
 	if Config.Prometheus.Enabled {
@@ -108,7 +106,7 @@ func main() {
 		}
 		start_dur := time.Now().UnixNano()
 		responses := pinger.StartPing(devices)
-		prom.CicleTimeAdd(float64(time.Now().UnixNano() - start_dur) / float64(time.Second))
+		prom.CicleTimeAdd(float64(time.Now().UnixNano()-start_dur) / float64(time.Second))
 		prom.CountCiclesInc()
 		if len(responses) != 0 {
 			err := api.SendUpdate(responses)

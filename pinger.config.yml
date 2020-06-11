@@ -18,9 +18,9 @@ prometheus:
 #Конфигруция апи
 api:
 #Адрес получения списка на пинг
-  host_list_addr: https://apiv2.golden.net.ua/v2/trusted/equipment/pinger
+  host_list_addr: https://apiv2.happylink.net.ua/v2/trusted/equipment/pinger
 #Адрес отправки изменений
-  report_addr: https://apiv2.golden.net.ua/v2/trusted/equipment/pinger
+  report_addr: https://apiv2.happylink.net.ua/v2/trusted/equipment/pinger
 #Таймаут ожидания
   request_timeout: 30s
 

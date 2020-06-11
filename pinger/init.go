@@ -1,13 +1,12 @@
 package pinger
 
 import (
-	"bitbucket.org/meklis/helpprovider-gopinger/prom"
-	"bitbucket.org/meklis/helpprovider_snmp/logger"
+	"github.com/meklis/all-ok-pinger/prom"
+	"github.com/meklis/all-ok-radius-server/logger"
 	"github.com/ztrue/tracerr"
 	"golang.org/x/net/icmp"
 	"time"
 )
-
 
 func (c *Pinger) StartPing(data []Device) (resp []Device) {
 	c.lg.DebugF("Запустили пинговалку IPv4/IPv6...")
@@ -62,7 +61,7 @@ func (c *Pinger) StartPing(data []Device) (resp []Device) {
 				} else if countResp == 0 && status > 0 {
 					//Работал, но не прислал ничего
 					c.setChangedResp(ip, -1)
-//					c.lg.InfoF("Host %v has status UP and now not send response in inspection %v, downing...", ip, inspect+1)
+					//					c.lg.InfoF("Host %v has status UP and now not send response in inspection %v, downing...", ip, inspect+1)
 				} else if countResp > 0 && status > 0 {
 					//Как работал, так и работает
 					c.deleteDevFromRequest(ip)
@@ -70,7 +69,7 @@ func (c *Pinger) StartPing(data []Device) (resp []Device) {
 					//Не вносим никаких изменений
 				}
 			} else {
-				if countResp <= 0  {
+				if countResp <= 0 {
 					c.setChangedResp(ip, -1)
 				} else if countResp > 0 && countResp < c.Config.ICMP.MustPackagesForUp {
 					c.setChangedResp(ip, 0)
@@ -91,7 +90,7 @@ func (c *Pinger) StartPing(data []Device) (resp []Device) {
 		if inspections > 0 {
 			//Checking for up
 			if inspections >= c.Config.ICMP.MustInspectionsSuccessForUp {
-			//	count := int((inspections / c.Config.ICMP.NumberOfInspection) * 100)
+				//	count := int((inspections / c.Config.ICMP.NumberOfInspection) * 100)
 				forUp[ip] = int((inspections * 100) / c.Config.ICMP.NumberOfInspection)
 			} else {
 				c.lg.InfoF("Host %v has %v success inspections, must have %v for UP, ignoring...", ip, inspections, c.Config.ICMP.MustInspectionsSuccessForUp)
@@ -106,7 +105,7 @@ func (c *Pinger) StartPing(data []Device) (resp []Device) {
 	}
 	//Work with snmp timing
 	for dev, latency := range c.getTimings() {
-		prom.PeerLatencyMsSet(dev, float64(latency) / float64(time.Second))
+		prom.PeerLatencyMsSet(dev, float64(latency)/float64(time.Second))
 	}
 	c.lg.Noticef("UP Hosts = %v, DOWN Hosts = %v", len(forUp), len(forDown))
 	if c.Config.TCP.Enable {
@@ -300,14 +299,14 @@ func (c *Pinger) reopenSockets() error {
 	return nil
 }
 
-func (c *Pinger) setTimeStart(peer string ) {
+func (c *Pinger) setTimeStart(peer string) {
 	c.Lock()
 	defer c.Unlock()
 	data := c.icmpTiming[peer]
 	data.Start = time.Now().UnixNano()
 	c.icmpTiming[peer] = data
 }
-func (c *Pinger) setTimeStop(peer string )  {
+func (c *Pinger) setTimeStop(peer string) {
 	c.Lock()
 	defer c.Unlock()
 
@@ -330,10 +329,10 @@ func (c *Pinger) getTimings() map[string]int64 {
 			c.lg.Noticef("Timing for %v corrupted. StartTime=%v, StopTime=%v", ip, t.Start, t.Stop)
 		}
 	}
-	return  r
+	return r
 }
 
-func (c *Pinger) clearTimings()  {
+func (c *Pinger) clearTimings() {
 	c.Lock()
 	defer c.Unlock()
 	for ip, _ := range c.icmpTiming {
