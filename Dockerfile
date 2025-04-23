@@ -15,4 +15,4 @@ ENV API_REPORTS_URL=http://127.0.0.1:9099/api/v1/component/pinger/pinger
 WORKDIR /app
 COPY --from=builder /app/icmp-pinger /app
 COPY pinger.config.yml /app
-ENTRYPOINT ["/icmp-pinger"]
+ENTRYPOINT ["/app/icmp-pinger"]
