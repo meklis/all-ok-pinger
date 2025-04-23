@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	api_module "github.com/meklis/all-ok-pinger/api"
@@ -109,7 +110,10 @@ func main() {
 		prom.CicleTimeAdd(float64(time.Now().UnixNano()-start_dur) / float64(time.Second))
 		prom.CountCiclesInc()
 		if len(responses) != 0 {
+			request, _ := json.Marshal(responses)
+			lg.DebugF("Sending statuses: %v", string(request))
 			err := api.SendUpdate(responses)
+
 			if err != nil {
 				lg.Errorf("Error update hosts list. Err: %v", tracerr.Sprint(err))
 				time.Sleep(time.Second * 10)

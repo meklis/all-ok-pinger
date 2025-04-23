@@ -7,8 +7,8 @@ system:
   logger:
      console:
         enabled: true
-        enable_color: true
-        log_level: 6
+        enable_color: false
+        log_level: ${LOG_LEVEL_INT:6}
 
 prometheus:
   path: /metrics
