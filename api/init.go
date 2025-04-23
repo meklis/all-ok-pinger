@@ -49,9 +49,9 @@ func (c *API) GetHosts() ([]pinger.Device, error) {
 func (c *API) SendUpdate(dev []pinger.Device) error {
 
 	request, _ := json.Marshal(dev)
-	c.Config.Logger.DebugF("Report URL: %v", c.Config.HostListAddr+"?ident="+c.Config.PingerIdent)
+	c.Config.Logger.DebugF("Report URL: %v", c.Config.ReportAddr+"?ident="+c.Config.PingerIdent)
 	c.Config.Logger.DebugF("Sending statuses: %v", string(request))
-	resp, err := req.Post(c.Config.HostListAddr+"?ident="+c.Config.PingerIdent, req.BodyJSON(dev), c.headers)
+	resp, err := req.Post(c.Config.ReportAddr+"?ident="+c.Config.PingerIdent, req.BodyJSON(dev), c.headers)
 	if err != nil {
 		return tracerr.Wrap(err)
 	}
