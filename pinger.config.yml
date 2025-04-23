@@ -1,8 +1,8 @@
 system:
 #Какой таймаут делать между пингами
-  sleep_after_check: 10s
+  sleep_after_check: ${SLEEP_AFTER_CHECK:10s}
 #Идентификация пингера
-  pinger_ident: TEST-PINGER-UKRAINE
+  pinger_ident: ${PINGER_IDENT:PINGER-UKRAINE}
 #Конфигурация логгера
   logger:
      console:
@@ -18,11 +18,11 @@ prometheus:
 #Конфигруция апи
 api:
 #Адрес получения списка на пинг
-  host_list_addr: https://apiv2.happylink.net.ua/v2/trusted/equipment/pinger
+  host_list_addr: ${API_HOST_LIST_URL:http://127.0.0.1:9099/api/v1/component/pinger/pinger}
 #Адрес отправки изменений
-  report_addr: https://apiv2.happylink.net.ua/v2/trusted/equipment/pinger
+  report_addr: ${API_REPORTS_URL:http://127.0.0.1:9099/api/v1/component/pinger/pinger}
 #Таймаут ожидания
-  request_timeout: 30s
+  request_timeout: ${API_TIMEOUT:30s}
 
 
 #Конфигурация библиотеки пингера

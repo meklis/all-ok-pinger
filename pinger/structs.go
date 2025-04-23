@@ -55,6 +55,7 @@ type ConfigurationTcpCheck struct {
 }
 
 type Device struct {
-	Ip     string `yaml:"ip" json:"ip"`
-	Status int    `yaml:"status" json:"status"`
+	Ip          string `yaml:"ip" json:"ip"`
+	Status      int    `yaml:"status" json:"status"`
+	TargetGroup string `yaml:"target_group" json:"target_group"`
 }

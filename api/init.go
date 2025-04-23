@@ -2,6 +2,7 @@ package api
 
 import (
 	"crypto/tls"
+	"fmt"
 	"github.com/imroc/req"
 	"github.com/meklis/all-ok-pinger/pinger"
 	"github.com/ztrue/tracerr"
@@ -36,6 +37,7 @@ func (c *API) GetHosts() ([]pinger.Device, error) {
 	}
 	data := ApiResponse{}
 	if err := resp.ToJSON(&data); err != nil {
+		fmt.Println(resp.String())
 		return nil, tracerr.Wrap(err)
 	}
 	return data.Data, nil
@@ -64,7 +66,7 @@ func NewApi(conf Configuration) *API {
 	api := new(API)
 	api.Config = conf
 	api.headers = req.Header{
-		"Accept": "application/json",
+		"Content-Type": "application/json",
 	}
 	return api
 }

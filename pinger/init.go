@@ -143,8 +143,9 @@ func (c *Pinger) StartPing(data []Device) (resp []Device) {
 				value = 0
 			}
 			resp = append(resp, Device{
-				Ip:     dev.Ip,
-				Status: value,
+				Ip:          dev.Ip,
+				Status:      value,
+				TargetGroup: dev.TargetGroup,
 			})
 			c.lg.DebugF("Append to response host %v with status DOWN(%v%%)", dev.Ip, value)
 		}
@@ -153,8 +154,9 @@ func (c *Pinger) StartPing(data []Device) (resp []Device) {
 				value = 100
 			}
 			resp = append(resp, Device{
-				Ip:     dev.Ip,
-				Status: value,
+				Ip:          dev.Ip,
+				Status:      value,
+				TargetGroup: dev.TargetGroup,
 			})
 			c.lg.DebugF("Append to response host %v with status UP(%v%%)", dev.Ip, value)
 		}

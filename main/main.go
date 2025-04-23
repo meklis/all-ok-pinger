@@ -25,8 +25,8 @@ var (
 )
 
 const (
-	VERSION    = "0.2"
-	BUILD_DATE = "2020-04-15 19:30"
+	VERSION    = "0.3"
+	BUILD_DATE = "2025-04-15 19:30"
 )
 
 func init() {
@@ -127,11 +127,9 @@ func LoadConfig(path string, Config *Configuration) error {
 		return err
 	}
 	yamlConfig := string(bytes)
-	for _, e := range os.Environ() {
-		pair := strings.SplitN(e, "=", 2)
-		yamlConfig = strings.ReplaceAll(yamlConfig, fmt.Sprintf("${%v}", pair[0]), pair[1])
-	}
-	err = yaml.Unmarshal([]byte(yamlConfig), &Config)
+	expandedContent := ExpandEnvDefault(yamlConfig)
+
+	err = yaml.Unmarshal([]byte(expandedContent), Config)
 	fmt.Printf(`Loaded configuration from %v with env readed:
 %v
 `, path, yamlConfig)
@@ -139,6 +137,20 @@ func LoadConfig(path string, Config *Configuration) error {
 		return err
 	}
 	return nil
+}
+
+func ExpandEnvDefault(s string) string {
+	return os.Expand(s, func(key string) string {
+		// Определение дефолтного значения через двоеточие.
+		parts := strings.SplitN(key, ":", 2)
+		if len(parts) == 2 {
+			if value, ok := os.LookupEnv(parts[0]); ok {
+				return value
+			}
+			return parts[1]
+		}
+		return os.Getenv(key)
+	})
 }
 
 func PrintStarted() {
