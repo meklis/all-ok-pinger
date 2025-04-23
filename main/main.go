@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"flag"
 	"fmt"
 	api_module "github.com/meklis/all-ok-pinger/api"
@@ -91,6 +90,7 @@ func main() {
 		RequestTimeout: Config.Api.RequestTimeout,
 		HostListAddr:   Config.Api.HostListAddr,
 		ReportAddr:     Config.Api.ReportAddr,
+		Logger:         lg,
 	})
 	err, pinger := pinger_module.NewPinger(Config.Pinger, lg)
 	if err != nil {
@@ -110,8 +110,6 @@ func main() {
 		prom.CicleTimeAdd(float64(time.Now().UnixNano()-start_dur) / float64(time.Second))
 		prom.CountCiclesInc()
 		if len(responses) != 0 {
-			request, _ := json.Marshal(responses)
-			lg.DebugF("Sending statuses: %v", string(request))
 			err := api.SendUpdate(responses)
 
 			if err != nil {
