@@ -60,7 +60,7 @@ pinger:
     time_duration_to_send: 7000ns
   tcp_check:
     #Включена
-    enabled: no
+    enabled: yes
     #Список портов на проверку. Задержка проверки высчитывается по count(ports)*connect_timeout, соответственно 4 порта *3s = 12s ожидания
     ports:
       - 22
