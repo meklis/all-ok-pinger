@@ -1,0 +1,583 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>All-OK Pinger</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--fg:#1d2330;--muted:#6b7385;--line:#e3e6ec;--up:#1f9d55;--down:#d64545;--warn:#c98a00;--unk:#8a8f9c;--acc:#2f6fdf}
+@media (prefers-color-scheme:dark){:root{--bg:#12151b;--card:#1a1f27;--fg:#e4e7ee;--muted:#8d95a6;--line:#2a313c;--up:#3ec27a;--down:#ef6464;--warn:#e0a92a;--unk:#7d8494;--acc:#6b9cff}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+header{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:baseline;padding:14px 16px;border-bottom:1px solid var(--line);background:var(--card)}
+header h1{font-size:18px;margin:0}
+header .meta{color:var(--muted);font-size:13px}
+#ws{margin-left:auto;font-size:13px}
+main{padding:16px;max-width:1600px;margin:0 auto}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:10px 12px}
+.card .l{color:var(--muted);font-size:12px}
+.card .v{font-size:22px;font-weight:600;font-variant-numeric:tabular-nums}
+.up{color:var(--up)}.down{color:var(--down)}.warn{color:var(--warn)}.unk{color:var(--unk)}
+.tabs{display:flex;gap:4px;margin-bottom:10px}
+.tabs button{border:1px solid var(--line);background:var(--card);color:var(--fg);padding:6px 12px;border-radius:6px;cursor:pointer}
+.tabs button.on{border-color:var(--acc);color:var(--acc)}
+.badge{display:inline-block;min-width:18px;padding:0 5px;margin-left:4px;border-radius:9px;background:var(--acc);color:#fff;font-size:11px;text-align:center}
+.tools{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;align-items:center}
+input,select,.btn{background:var(--card);color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:6px 8px;font:inherit}
+.btn{cursor:pointer}
+input[type=search]{min-width:200px;flex:1;max-width:420px}
+label.chk{display:flex;gap:4px;align-items:center;color:var(--muted)}
+.tw{overflow-x:auto;background:var(--card);border:1px solid var(--line);border-radius:8px}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+th,td{padding:6px 10px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+th{position:sticky;top:0;background:var(--card);color:var(--muted);font-weight:500;cursor:pointer;user-select:none;font-size:12px}
+th.s::after{content:" ▾"}th.s.asc::after{content:" ▴"}
+tbody tr[data-ip]{cursor:pointer}
+tbody tr:hover{background:color-mix(in srgb,var(--acc) 7%,transparent)}
+tr.grp td{background:color-mix(in srgb,var(--acc) 5%,var(--card));cursor:pointer;font-weight:500}
+tr.grp .cnt{font-weight:400;color:var(--muted);margin-left:12px}
+tr.grp .cnt b{font-weight:500}
+tr.more td{color:var(--muted);font-size:12px}
+tr.sub>td{padding:0 0 8px 28px;background:color-mix(in srgb,var(--acc) 3%,var(--card))}
+tr.sub table{font-size:13px}
+tr.sub th{position:static;background:transparent;cursor:default}
+.subh{display:flex;gap:12px;align-items:center;padding:6px 10px;color:var(--muted);font-size:12px}
+.avail{display:inline-flex;align-items:center;gap:6px}
+.avail .bar{width:70px;height:6px;border-radius:3px;background:color-mix(in srgb,var(--down) 35%,transparent);overflow:hidden}
+.avail .bar i{display:block;height:100%;background:var(--up)}
+.logbox{background:var(--card);border:1px solid var(--line);border-radius:8px;margin-bottom:12px}
+.logh{display:flex;justify-content:space-between;align-items:center;padding:6px 12px;border-bottom:1px solid var(--line);color:var(--muted);font-size:13px}
+#log{font:12px/1.6 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;max-height:190px;overflow:auto;padding:4px 12px}
+#log .ll{white-space:nowrap;cursor:pointer}#log .ll:hover{background:color-mix(in srgb,var(--acc) 7%,transparent)}
+#log .t{color:var(--muted)}
+.fchip{display:inline-flex;gap:6px;align-items:center;border:1px solid var(--acc);color:var(--acc);border-radius:6px;padding:4px 8px;font-size:13px}
+.fchip button{border:0;background:none;color:inherit;cursor:pointer;font-size:14px;padding:0}
+tr.flash td{animation:flash 3s ease-out}
+@keyframes flash{0%{background:color-mix(in srgb,var(--warn) 30%,transparent)}100%{background:transparent}}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;background:var(--unk);flex:none}
+.dot.up{background:var(--up)}.dot.down{background:var(--down)}.dot.tcp{background:var(--warn)}
+.dot.falling{background:var(--down);animation:blink 1s infinite}.dot.rising{background:var(--up);animation:blink 1s infinite}
+@keyframes blink{50%{opacity:.25}}
+.st{font-size:11px;padding:1px 6px;border-radius:4px;border:1px solid currentColor}
+.st.falling{color:var(--down)}.st.rising{color:var(--up)}
+.progress{color:var(--muted);font-size:13px;margin:-6px 0 12px}
+.num{text-align:right}
+.b{display:inline-block;font-size:11px;padding:1px 6px;border-radius:4px;border:1px solid var(--line);color:var(--muted)}
+.b.y{color:var(--up);border-color:currentColor}.b.n{color:var(--down);border-color:currentColor}
+.ev{font-size:11px;padding:1px 6px;border-radius:4px;border:1px solid currentColor;color:var(--muted)}
+.ev.status_changed{color:var(--acc)}.ev.falling{color:var(--down)}.ev.rising{color:var(--up)}
+.ev.host_added,.ev.host_removed{color:var(--warn)}
+.trans{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-bottom:12px}
+.trans h3{margin:0 0 8px;font-size:13px;font-weight:500;color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{display:flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:6px;padding:4px 8px;cursor:pointer;font-size:12px;font-variant-numeric:tabular-nums}
+.chip .bar{width:48px;height:4px;border-radius:2px;background:var(--line);overflow:hidden}
+.chip .bar i{display:block;height:100%}
+.chip.falling .bar i{background:var(--down)}.chip.rising .bar i{background:var(--up)}
+pre{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:12px;overflow:auto;font-size:13px}
+.kv{display:grid;grid-template-columns:max-content 1fr;gap:4px 16px;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:12px}
+.kv div:nth-child(odd){color:var(--muted)}
+.err{color:var(--down)}
+.muted{color:var(--muted)}
+.pager{display:flex;gap:8px;align-items:center;margin-top:8px;color:var(--muted)}
+.pager button{border:1px solid var(--line);background:var(--card);color:var(--fg);padding:4px 10px;border-radius:6px;cursor:pointer}
+dialog{border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--fg);max-width:min(720px,95vw);width:100%}
+dialog::backdrop{background:#0006}
+</style>
+</head>
+<body>
+<header>
+  <h1>All-OK Pinger</h1>
+  <span class="meta" id="ident"></span>
+  <span class="meta" id="ver"></span>
+  <span class="meta" id="upd"></span>
+  <span id="ws" class="muted">○ подключение…</span>
+</header>
+<main>
+  <div class="cards" id="cards"></div>
+  <div class="progress" id="progress"></div>
+  <div class="trans" id="trans" hidden><h3 id="transh"></h3><div class="chips" id="chips"></div></div>
+  <div class="logbox">
+    <div class="logh"><span>Последние падения и поднятия</span><label class="chk" title="переходы «падает» / «поднимается» и изменения процента у работающих хостов"><input type="checkbox" id="logtrans"> подробно</label></div>
+    <div id="log"></div>
+  </div>
+  <div class="tabs">
+    <button data-tab="hosts" class="on">Хосты</button>
+    <button data-tab="groups">Группы</button>
+    <button data-tab="events">События<span class="badge" id="evbadge" hidden></span></button>
+    <button data-tab="settings">Настройки</button>
+  </div>
+
+  <section id="tab-hosts">
+    <div class="tools">
+      <input type="search" id="q" placeholder="Поиск: IP, группа, атрибуты">
+      <select id="fstatus">
+        <option value="">Все статусы</option><option value="up">Up</option><option value="down">Down</option>
+        <option value="unknown">Unknown</option><option value="transition">В переходе (сейчас)</option>
+        <option value="falling">Падают (сейчас)</option><option value="rising">Поднимаются (сейчас)</option>
+        <option value="tcp">Только TCP</option><option value="loss">С потерями</option>
+        <option value="report_pending">Ждут репорта</option>
+      </select>
+      <span id="hfilter"></span>
+      <span class="muted" id="cnt"></span>
+    </div>
+    <div class="tw"><table><thead id="thead"></thead><tbody id="tbody"></tbody></table></div>
+    <div class="pager"><button id="prev">←</button><span id="page"></span><button id="next">→</button></div>
+  </section>
+
+  <section id="tab-groups" hidden>
+    <div class="tools">
+      <span class="muted">Группировать по</span>
+      <select id="groupby"></select>
+      <input type="search" id="gq" placeholder="Поиск группы">
+      <label class="chk"><input type="checkbox" id="gproblems"> только с проблемами</label>
+      <button class="btn" id="collapse">Свернуть все</button>
+      <span class="muted" id="gcnt"></span>
+    </div>
+    <div class="tw"><table><thead id="gthead"></thead><tbody id="gbody"></tbody></table></div>
+    <div class="pager"><button id="gprev">←</button><span id="gpage"></span><button id="gnext">→</button></div>
+  </section>
+
+  <section id="tab-events" hidden>
+    <div class="tools">
+      <input type="search" id="evq" placeholder="Поиск: IP, атрибуты">
+      <select id="evtype">
+        <option value="">Все события</option>
+        <option value="status_changed">Смена статуса</option>
+        <option value="transition">Переходы (падает / поднимается / отмена)</option>
+        <option value="list">Изменения списка хостов</option>
+      </select>
+      <label class="chk"><input type="checkbox" id="evpause"> пауза</label>
+      <button class="btn" id="evclear">Очистить</button>
+      <span class="muted" id="evcnt"></span>
+    </div>
+    <div class="tw"><table>
+      <thead><tr><th>Время</th><th>Событие</th><th>IP</th><th>Хост</th><th>Статус</th><th>Детали</th></tr></thead>
+      <tbody id="evbody"></tbody>
+    </table></div>
+  </section>
+
+  <section id="tab-settings" hidden>
+    <h3>Последний цикл</h3><div class="kv" id="cycle"></div>
+    <h3>Конфигурация</h3><pre id="config"></pre>
+  </section>
+</main>
+<dialog id="dlg"><pre id="dlgbody" style="border:0;padding:0"></pre><form method="dialog"><button class="btn">Закрыть</button></form></dialog>
+<script>
+const $ = s => document.querySelector(s);
+const PAGE = 200, GROUP_PAGE = 100, GROUP_ROWS = 100, MAX_EVENTS = 2000, LOG_ROWS = 200, NAME_KEYS = ['_name', '_title', '_hostname', '_location'];
+
+// ---- preferences (localStorage) ----
+const PREFS_KEY = 'pinger.prefs';
+let prefs = {groupBy: 'target_group', gSortKey: 'problems', gSortAsc: false, gProblems: false, expanded: {},
+  sortKey: 'ip', sortAsc: true, fstatus: '', hostFilter: null, tab: 'hosts', evtype: '', logTrans: false};
+try { Object.assign(prefs, JSON.parse(localStorage.getItem(PREFS_KEY) || '{}')); } catch (e) {}
+if (!prefs.groupBy) prefs.groupBy = 'target_group';
+function savePrefs() { try { localStorage.setItem(PREFS_KEY, JSON.stringify(prefs)); } catch (e) {} }
+const expandedSet = () => new Set(prefs.expanded[prefs.groupBy] || []);
+function setExpanded(set) { prefs.expanded[prefs.groupBy] = [...set].slice(-1000); savePrefs(); }
+
+// ---- state ----
+let hosts = [], byIp = new Map(), attrKeys = [], page = 0, gpage = 0, progress = {}, summary = null;
+let events = [], unseen = 0;
+
+const esc = v => String(v ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmt = v => v == null ? '—' : (+v).toFixed(v < 10 ? 2 : 1);
+const ago = t => { if (!t) return '—'; const s = Math.round((Date.now() - new Date(t)) / 1000); return s < 60 ? s + 'с назад' : s < 3600 ? Math.round(s/60) + 'м назад' : Math.round(s/3600) + 'ч назад'; };
+const dur = s => { s = Math.round(s); const d = Math.floor(s/86400), h = Math.floor(s%86400/3600), m = Math.floor(s%3600/60); return (d ? d+'д ' : '') + (h ? h+'ч ' : '') + m + 'м'; };
+const ipNum = ip => ip.includes('.') ? ip.split('.').reduce((a, o) => a * 256 + (+o), 0) : 0;
+const attrStr = v => v == null ? '' : typeof v === 'object' ? JSON.stringify(v) : String(v);
+// attribute name without prefix: _model -> model
+const label = k => k.startsWith('_') ? k.slice(1) : k;
+function stateOf(h) { if (h.pending) return h.pending.state; if (h.status == null) return 'unk'; if (h.status === 999) return 'tcp'; return h.status > 0 ? 'up' : 'down'; }
+const STATE_NAMES = {up: 'Up', down: 'Down', tcp: 'Только TCP', unk: 'Unknown', falling: 'Падают', rising: 'Поднимаются'};
+const hostName = h => { if (!h) return ''; for (const k of NAME_KEYS) if (h[k] != null && h[k] !== '') return attrStr(h[k]); return h.target_group || ''; };
+const pendTxt = p => p.state === 'falling' ? `падает ${p.failed_inspections}/${p.inspections}` : `поднимается ${p.success_inspections}/${p.inspections}`;
+const pend = h => h.pending ? ` <span class="st ${h.pending.state}" title="с ${new Date(h.pending.since).toLocaleTimeString()}">${pendTxt(h.pending)}</span>` : '';
+const bool = v => v == null ? '<span class="b">—</span>' : v ? '<span class="b y">да</span>' : '<span class="b n">нет</span>';
+const statusTxt = v => v == null ? '<span class="unk">null</span>' : `<span class="${v > 0 ? (v === 999 || v < 100 ? 'warn' : 'up') : 'down'}">${v}</span>`;
+const lossTxt = h => { const l = h.loss || {}; const c = l.loss >= 100 ? 'down' : l.loss > 0 ? 'warn' : ''; return `<span class="${c}">${l.loss ?? 0}%</span> <span class="muted">${l.received ?? 0}/${l.transmitted ?? 0}</span>`; };
+
+const cols = () => [
+  ['ip', 'IP', h => `<span class="dot ${stateOf(h)}"></span>${esc(h.ip)}`, h => ipNum(h.ip) || h.ip],
+  ['status', 'Статус', h => statusTxt(h.status) + pend(h) + (h.report_pending ? ` <span class="b" title="статус отличается от известного серверу${h.list_status != null ? ' (в списке хостов: ' + h.list_status + ')' : ''}, уйдёт в следующем репорте">ждёт репорта</span>` : ''), h => h.pending ? (h.pending.state === 'falling' ? -2e9 : -1.5e9) : (h.status ?? -1e9), 'num'],
+  ['target_group', 'Группа', h => esc(h.target_group), h => h.target_group || ''],
+  ...attrKeys.map(k => [k, label(k), h => esc(attrStr(h[k])), h => h[k] ?? '']),
+  ['icmp', 'ICMP', h => bool(h.icmp), h => +h.icmp],
+  ['tcp', 'TCP', h => bool(h.tcp), h => h.tcp == null ? -1 : +h.tcp],
+  ['lat', 'RTT avg', h => fmt(h.latency?.avg), h => h.latency?.avg ?? 1e9, 'num'],
+  ['lat_mm', 'min / max', h => h.latency ? fmt(h.latency.min) + ' / ' + fmt(h.latency.max) : '—', h => h.latency?.max ?? 1e9, 'num'],
+  ['lat1', 'avg 1m', h => fmt(h.latency_1m?.avg), h => h.latency_1m?.avg ?? 1e9, 'num'],
+  ['lat5', 'avg 5m', h => fmt(h.latency_5m?.avg), h => h.latency_5m?.avg ?? 1e9, 'num'],
+  ['loss', 'Потери', lossTxt, h => h.loss?.loss ?? 0, 'num'],
+  ['loss5', 'Потери 5m', h => (h.loss_5m?.loss ?? 0) + '%', h => h.loss_5m?.loss ?? 0, 'num'],
+  ['changed_at', 'Изменён', h => ago(h.changed_at), h => h.changed_at || ''],
+  ['reported_at', 'Репорт', h => ago(h.reported_at), h => h.reported_at || ''],
+];
+
+// ---- grouping ----
+function groupKey(by, h) {
+  if (by === 'state') return stateOf(h);
+  if (by === 'target_group') return h.target_group || '';
+  return attrStr(h[by]);
+}
+const groupLabel = (by, k) => by === 'state' ? (STATE_NAMES[k] || k) : (k === '' ? '(пусто)' : k);
+const groupByName = by => by === 'state' ? 'состояние' : label(by);
+
+// ---- hosts tab ----
+function matchQ(h, q) { return !q || [h.ip, h.target_group, ...attrKeys.map(k => attrStr(h[k]))].some(v => String(v ?? '').toLowerCase().includes(q)); }
+function filtered() {
+  const q = $('#q').value.trim().toLowerCase(), fs = prefs.fstatus, hf = prefs.hostFilter;
+  return hosts.filter(h => {
+    if (hf && groupKey(hf.by, h) !== hf.value) return false;
+    const st = stateOf(h);
+    switch (fs) {
+      case 'up': if (st !== 'up' && st !== 'tcp') return false; break;
+      case 'down': if (st !== 'down') return false; break;
+      case 'unknown': if (st !== 'unk') return false; break;
+      case 'transition': if (!h.pending) return false; break;
+      case 'falling': case 'rising': case 'tcp': if (st !== fs) return false; break;
+      case 'loss': if (!(h.loss?.loss > 0)) return false; break;
+      case 'report_pending': if (!h.report_pending) return false; break;
+    }
+    return matchQ(h, q);
+  });
+}
+function renderHostFilter() {
+  const hf = prefs.hostFilter;
+  $('#hfilter').innerHTML = hf ? `<span class="fchip">${esc(groupByName(hf.by))} = ${esc(groupLabel(hf.by, hf.value))}<button id="hfclear" title="Снять фильтр">×</button></span>` : '';
+}
+function renderHosts() {
+  const c = cols();
+  $('#thead').innerHTML = '<tr>' + c.map(([k, t, , , cls]) => `<th data-k="${esc(k)}" class="${cls || ''} ${k === prefs.sortKey ? 's' + (prefs.sortAsc ? ' asc' : '') : ''}">${esc(t)}</th>`).join('') + '</tr>';
+  const col = c.find(x => x[0] === prefs.sortKey) || c[0];
+  const list = filtered().sort((a, b) => { const x = col[3](a), y = col[3](b); return (x < y ? -1 : x > y ? 1 : 0) * (prefs.sortAsc ? 1 : -1); });
+  const now = Date.now();
+  const pages = Math.max(1, Math.ceil(list.length / PAGE));
+  page = Math.min(page, pages - 1);
+  $('#tbody').innerHTML = list.slice(page * PAGE, (page + 1) * PAGE).map(h =>
+    `<tr data-ip="${esc(h.ip)}" class="${h._flash && now - h._flash < 3000 ? 'flash' : ''}" title="${esc(h.error || '')}">` + c.map(([, , f, , cls]) => `<td class="${cls || ''}">${f(h)}</td>`).join('') + '</tr>').join('')
+    || `<tr><td colspan="${c.length}" class="muted">Нет хостов</td></tr>`;
+  $('#cnt').textContent = `${list.length} из ${hosts.length}`;
+  $('#page').textContent = `${page + 1} / ${pages}`;
+  renderHostFilter();
+}
+
+// ---- groups tab ----
+const SEV = {falling: 0, down: 1, rising: 2, tcp: 3, unk: 4, up: 5};
+const gcols = [
+  ['name', 'Группа', null, 'name'], ['total', 'Всего', 'num'], ['up', 'Up', 'num up'], ['down', 'Down', 'num down'],
+  ['falling', 'Падают', 'num down'], ['rising', 'Поднимаются', 'num up'], ['tcp', 'Только TCP', 'num warn'],
+  ['unk', 'Unknown', 'num unk'], ['loss', 'С потерями', 'num warn'], ['avail', 'Доступность', ''], ['rtt', 'RTT avg', 'num'],
+];
+function buildGroups() {
+  const by = prefs.groupBy, groups = new Map();
+  for (const h of hosts) {
+    const k = groupKey(by, h);
+    let g = groups.get(k);
+    if (!g) groups.set(k, g = {key: k, hosts: [], total: 0, up: 0, down: 0, tcp: 0, unk: 0, falling: 0, rising: 0, loss: 0, rttSum: 0, rttN: 0});
+    g.hosts.push(h); g.total++;
+    const st = stateOf(h); g[st]++;
+    if (h.loss?.loss > 0 && h.status > 0) g.loss++;
+    if (h.latency) { g.rttSum += h.latency.avg; g.rttN++; }
+  }
+  for (const g of groups.values()) {
+    const known = g.up + g.tcp + g.down + g.falling + g.rising;
+    // falling hosts are still up, rising - still down
+    g.avail = known ? (g.up + g.tcp + g.falling) * 100 / known : null;
+    g.rtt = g.rttN ? g.rttSum / g.rttN : null;
+    g.problems = (g.falling + g.rising) * 1e6 + g.down;
+    g.name = groupLabel(by, g.key);
+  }
+  return [...groups.values()];
+}
+function renderGroupBy() {
+  const opts = [['target_group', 'target_group'], ['state', 'состояние'], ...attrKeys.map(k => [k, label(k)])];
+  if (!opts.some(o => o[0] === prefs.groupBy)) opts.push([prefs.groupBy, label(prefs.groupBy)]);
+  $('#groupby').innerHTML = opts.map(([v, t]) => `<option value="${esc(v)}" ${v === prefs.groupBy ? 'selected' : ''}>${esc(t)}</option>`).join('');
+}
+function renderGroups() {
+  const q = $('#gq').value.trim().toLowerCase();
+  let gl = buildGroups();
+  const total = gl.length;
+  if (q) gl = gl.filter(g => g.name.toLowerCase().includes(q));
+  if (prefs.gProblems) gl = gl.filter(g => g.down || g.falling || g.rising);
+  const k = prefs.gSortKey, dir = prefs.gSortAsc ? 1 : -1;
+  gl.sort((a, b) => {
+    if (k === 'name') return a.name.localeCompare(b.name, 'ru', {numeric: true}) * dir;
+    const x = a[k] ?? -1, y = b[k] ?? -1;
+    return (x - y) * dir || a.name.localeCompare(b.name, 'ru', {numeric: true});
+  });
+  $('#gthead').innerHTML = '<tr>' + gcols.map(([key, t, cls]) => `<th data-k="${key}" class="${cls || ''} ${key === k ? 's' + (prefs.gSortAsc ? ' asc' : '') : ''}">${t}</th>`).join('') + '</tr>';
+  const pages = Math.max(1, Math.ceil(gl.length / GROUP_PAGE));
+  gpage = Math.min(gpage, pages - 1);
+  const exp = expandedSet(), ncol = gcols.length;
+  let html = '';
+  for (const g of gl.slice(gpage * GROUP_PAGE, (gpage + 1) * GROUP_PAGE)) {
+    const open = exp.has(g.key);
+    const dot = g.falling ? 'falling' : g.rising ? 'rising' : g.down ? 'down' : g.up || g.tcp ? 'up' : 'unk';
+    const n = (v, cls) => `<td class="num ${v ? cls : 'muted'}">${v}</td>`;
+    html += `<tr class="grp" data-g="${esc(g.key)}"><td>${open ? '▾' : '▸'} <span class="dot ${dot}"></span>${esc(g.name)}</td>` +
+      `<td class="num">${g.total}</td>${n(g.up, 'up')}${n(g.down, 'down')}${n(g.falling, 'down')}${n(g.rising, 'up')}${n(g.tcp, 'warn')}${n(g.unk, 'unk')}${n(g.loss, 'warn')}` +
+      `<td>${g.avail == null ? '—' : `<span class="avail"><span class="bar"><i style="width:${g.avail.toFixed(1)}%"></i></span>${g.avail.toFixed(1)}%</span>`}</td>` +
+      `<td class="num">${fmt(g.rtt)}</td></tr>`;
+    if (open) {
+      const list = g.hosts.slice().sort((a, b) => SEV[stateOf(a)] - SEV[stateOf(b)] || ipNum(a.ip) - ipNum(b.ip));
+      html += `<tr class="sub"><td colspan="${ncol}"><div class="subh"><span>${list.length > GROUP_ROWS ? `показаны ${GROUP_ROWS} из ${list.length} (сначала проблемные)` : `хостов: ${list.length}`}</span>` +
+        `<button class="btn" data-open="${esc(g.key)}">Открыть в списке хостов →</button></div>` +
+        `<table><thead><tr><th>IP</th><th>Статус</th><th>Имя</th><th class="num">RTT avg</th><th class="num">Потери</th><th>Изменён</th></tr></thead><tbody>` +
+        list.slice(0, GROUP_ROWS).map(h => `<tr data-ip="${esc(h.ip)}"><td><span class="dot ${stateOf(h)}"></span>${esc(h.ip)}</td><td>${statusTxt(h.status)}${pend(h)}</td>` +
+          `<td>${esc(hostName(h))}</td><td class="num">${fmt(h.latency?.avg)}</td><td class="num">${lossTxt(h)}</td><td>${ago(h.changed_at)}</td></tr>`).join('') +
+        '</tbody></table></td></tr>';
+    }
+  }
+  $('#gbody').innerHTML = html || `<tr><td colspan="${ncol}" class="muted">Нет групп</td></tr>`;
+  $('#gcnt').textContent = `групп: ${gl.length}` + (gl.length !== total ? ` из ${total}` : '');
+  $('#gpage').textContent = `${gpage + 1} / ${pages}`;
+}
+
+// ---- hosts in transition ----
+function renderTransitions() {
+  const list = hosts.filter(h => h.pending);
+  $('#trans').hidden = !list.length;
+  if (!list.length) return;
+  const f = list.filter(h => h.pending.state === 'falling').length;
+  $('#transh').textContent = `Сейчас в переходе: ${list.length} (падают ${f}, поднимаются ${list.length - f})` + (progress.running ? ` · инспекция ${progress.inspection} из ${progress.inspections}` : '');
+  list.sort((a, b) => (a.pending.state === 'falling' ? 0 : 1) - (b.pending.state === 'falling' ? 0 : 1) ||
+    (b.pending.failed_inspections + b.pending.success_inspections) - (a.pending.failed_inspections + a.pending.success_inspections));
+  const show = list.slice(0, 60);
+  $('#chips').innerHTML = show.map(h => {
+    const p = h.pending, n = p.state === 'falling' ? p.failed_inspections : p.success_inspections;
+    const pct = Math.min(100, Math.round(n * 100 / (p.inspections || 1)));
+    return `<div class="chip ${p.state}" data-ip="${esc(h.ip)}" title="${esc(pendTxt(p))}, с ${new Date(p.since).toLocaleTimeString()}"><span class="dot ${p.state}"></span>${esc(h.ip)}` +
+      (hostName(h) ? ` <span class="muted">${esc(hostName(h))}</span>` : '') + `<span class="bar"><i style="width:${pct}%"></i></span>${n}/${p.inspections}</div>`;
+  }).join('') + (list.length > show.length ? `<div class="chip" data-more="1">ещё ${list.length - show.length} →</div>` : '');
+}
+
+// ---- log of last falls / rises ----
+const LOG_TRANS = ['falling', 'rising', 'falling_cancelled', 'rising_cancelled'];
+const isUp = v => v != null && v > 0;
+// status change of up host (percent of received packets), not up <-> down
+const isPercentChange = e => e.type === 'status_changed' && isUp(e.prev_status) && isUp(e.status) && e.prev_status !== 999 && e.status !== 999;
+function logLine(e) {
+  const t = `<span class="t">${new Date(e.time).toLocaleString()}</span>`, name = esc(hostName(e.host));
+  let what;
+  switch (e.type) {
+    case 'status_changed':
+      what = isPercentChange(e) ? '<span class="warn">≈ потери     </span>' : e.status === 999 ? '<span class="warn">◆ только TCP </span>' :
+        isUp(e.status) ? '<span class="up">▲ поднялся   </span>' : '<span class="down">▼ упал       </span>';
+      break;
+    case 'falling': what = '<span class="down">… падает     </span>'; break;
+    case 'rising': what = '<span class="up">… поднимается</span>'; break;
+    default: what = '<span class="muted">✓ отмена     </span>';
+  }
+  const det = e.type === 'status_changed' ? `${e.prev_status ?? 'null'} → ${e.status}` + (e.host?.loss ? `, потери ${e.host.loss.loss}%` : '') : e.pending ? pendTxt(e.pending) : '';
+  return `<div class="ll" data-ip="${esc(e.ip)}">${t}  ${what}  ${esc(e.ip.padEnd(15))}  ${name}  <span class="muted">${esc(det)}</span></div>`;
+}
+function renderLog() {
+  const list = events.filter(e => e.type === 'status_changed' ? (prefs.logTrans || !isPercentChange(e)) : prefs.logTrans && LOG_TRANS.includes(e.type)).slice(0, LOG_ROWS);
+  $('#log').innerHTML = list.map(logLine).join('').replaceAll('  ', ' &nbsp;') || '<div class="muted">Падений и поднятий пока не было</div>';
+}
+
+// ---- events tab ----
+const EV_NAMES = {status_changed: 'смена статуса', falling: 'падает', rising: 'поднимается', falling_cancelled: 'падение отменено', rising_cancelled: 'подъём отменён', host_added: 'добавлен', host_removed: 'удалён'};
+const EV_GROUPS = {transition: LOG_TRANS, list: ['host_added', 'host_removed']};
+function renderEvents() {
+  const q = $('#evq').value.trim().toLowerCase(), t = prefs.evtype;
+  const list = events.filter(e => (!t || (EV_GROUPS[t] ? EV_GROUPS[t].includes(e.type) : e.type === t)) &&
+    (!q || e.ip.includes(q) || Object.values(e.host || {}).some(v => attrStr(v).toLowerCase().includes(q))));
+  $('#evcnt').textContent = `${list.length} из ${events.length}`;
+  $('#evbody').innerHTML = list.slice(0, 500).map(e => {
+    const st = e.type === 'status_changed' ? `${statusTxt(e.prev_status)} → ${statusTxt(e.status)}` : statusTxt(e.status);
+    const det = e.pending ? pendTxt(e.pending) : e.type === 'status_changed' && e.host?.loss ? `потери ${e.host.loss.loss}%` : '';
+    return `<tr data-ev="${events.indexOf(e)}"><td>${new Date(e.time).toLocaleTimeString()}</td><td><span class="ev ${e.type}">${esc(EV_NAMES[e.type] || e.type)}</span></td>` +
+      `<td>${esc(e.ip)}</td><td>${esc(hostName(e.host))}</td><td>${st}</td><td class="muted">${esc(det)}</td></tr>`;
+  }).join('') || '<tr><td colspan="6" class="muted">Событий пока нет</td></tr>';
+}
+function updateBadge() { const b = $('#evbadge'); b.hidden = !unseen; b.textContent = unseen > 999 ? '999+' : unseen; }
+
+// ---- render scheduling ----
+function renderAll() {
+  renderTransitions(); renderLog();
+  if (!$('#tab-hosts').hidden) renderHosts();
+  if (!$('#tab-groups').hidden) renderGroups();
+  if (!$('#tab-events').hidden) renderEvents();
+}
+let renderTimer = null, lastRender = 0;
+function scheduleRender() {
+  if (renderTimer) return;
+  renderTimer = setTimeout(() => { renderTimer = null; lastRender = Date.now(); renderAll(); }, Math.max(0, 500 - (Date.now() - lastRender)));
+}
+
+// ---- websocket data ----
+function applyEvent(e) {
+  if (!$('#evpause').checked) {
+    events.unshift(e);
+    if (events.length > MAX_EVENTS) events.length = MAX_EVENTS;
+    if ($('#tab-events').hidden) { unseen++; updateBadge(); }
+  }
+  if (e.type === 'host_removed') {
+    if (byIp.delete(e.ip)) hosts = hosts.filter(h => h.ip !== e.ip);
+  } else {
+    let h = byIp.get(e.ip);
+    if (!h) { h = {ip: e.ip}; byIp.set(e.ip, h); hosts.push(h); }
+    if (e.host) Object.assign(h, e.host);
+    h.pending = e.pending || null;
+    if (e.type === 'status_changed') h.changed_at = e.time;
+    h._flash = Date.now();
+  }
+  scheduleRender();
+}
+function applyInspection(m) {
+  progress = m.progress || {};
+  const set = new Map((m.pending || []).map(p => [p.ip, p]));
+  for (const h of hosts) if (h.pending && !set.has(h.ip)) h.pending = null;
+  for (const [ip, p] of set) {
+    const h = byIp.get(ip);
+    if (!h) continue;
+    const {ip: _, status, ...pd} = p;
+    h.pending = pd;
+  }
+  renderProgress();
+  if (summary) { summary.hosts.falling = progress.falling; summary.hosts.rising = progress.rising; renderCards(); }
+  scheduleRender();
+}
+let ws = null, wsDelay = 1000, wsOnline = false;
+function connect() {
+  const u = new URL('api/v1/ws', location.href);
+  u.protocol = u.protocol === 'https:' ? 'wss:' : 'ws:';
+  ws = new WebSocket(u);
+  ws.onopen = () => { wsOnline = true; wsDelay = 1000; $('#ws').innerHTML = '<span class="up">● онлайн</span>'; loadHosts(); loadSummary(); loadEvents(); };
+  ws.onmessage = ev => {
+    let m; try { m = JSON.parse(ev.data); } catch (e) { return; }
+    if (m.type === 'ping') return;
+    if (m.type === 'inspection') return applyInspection(m);
+    if (m.type === 'cycle') { loadHosts(); loadSummary(); return; }
+    applyEvent(m);
+  };
+  ws.onclose = () => {
+    wsOnline = false;
+    $('#ws').innerHTML = '<span class="down">○ нет соединения, переподключение…</span>';
+    setTimeout(connect, wsDelay); wsDelay = Math.min(wsDelay * 2, 15000);
+  };
+}
+
+// ---- REST ----
+function card(l, v, cls = '') { return `<div class="card"><div class="l">${l}</div><div class="v ${cls}">${v}</div></div>`; }
+function renderCards() {
+  const s = summary, lc = s.last_cycle || {}, hs = s.hosts;
+  $('#cards').innerHTML = card('Хостов', hs.total) + card('Up', hs.up, 'up') + card('Down', hs.down, 'down') +
+    card('Падают сейчас', hs.falling, hs.falling ? 'down' : '') + card('Поднимаются сейчас', hs.rising, hs.rising ? 'up' : '') +
+    card('Unknown', hs.unknown, 'unk') + card('Только TCP', hs.tcp_only, 'warn') + card('С потерями', hs.with_loss, 'warn') +
+    card('Средний RTT, мс', fmt(s.avg_latency_ms)) + card('Цикл, с', lc.duration_sec ? lc.duration_sec.toFixed(1) : '—') +
+    card('Изменений / репорт', `${lc.changed ?? 0} / ${lc.report_sent ?? 0}`, lc.report_error ? 'down' : '') +
+    card('Ждут репорта', hs.report_pending ?? 0, hs.report_pending ? 'warn' : '') + card('Циклов', s.cycles);
+}
+function renderProgress() {
+  const p = progress, hl = summary?.host_list || {};
+  $('#progress').innerHTML = (p.running
+    ? `Идёт цикл: инспекция ${p.inspection || 0} из ${p.inspections}, ${p.hosts} хостов, запущен ${ago(p.started_at)}`
+    : 'Ожидание следующего цикла') +
+    ` · список хостов: ${hl.hosts ?? '—'}, загружен ${ago(hl.loaded_at)}` + (hl.error ? ` · <span class="err">ошибка загрузки ${ago(hl.error_at)}: ${esc(hl.error)}</span>` : '');
+}
+async function loadSummary() {
+  try {
+    const s = summary = await fetch('api/v1/summary').then(r => r.json());
+    progress = s.progress || {};
+    $('#ident').textContent = s.info.pinger_ident;
+    $('#ver').textContent = `v${s.info.version} · uptime ${dur(s.uptime_sec)}`;
+    $('#upd').textContent = 'обновлено ' + new Date().toLocaleTimeString();
+    renderCards(); renderProgress();
+    const lc = s.last_cycle || {}, hl = s.host_list || {};
+    const rows = [['Начало', lc.started_at], ['Окончание', lc.finished_at], ['Длительность, с', lc.duration_sec?.toFixed(2)], ['Хостов', lc.hosts],
+      ['Изменений', lc.changed], ['Смен up↔down', lc.flaps], ['Отправлено в репорте', lc.report_sent],
+      ['Ошибка репорта', lc.report_error ? `<span class="err">${esc(lc.report_error)}</span>` : '—'],
+      ['Список хостов загружен', hl.loaded_at], ['Хостов в списке', hl.hosts], ['Добавлено / обновлено / удалено', `${hl.added ?? 0} / ${hl.updated ?? 0} / ${hl.removed ?? 0}`],
+      ['Ошибка загрузки списка', hl.error ? `<span class="err">${esc(hl.error)} (${hl.error_at})</span>` : '—']];
+    $('#cycle').innerHTML = rows.map(([k, v]) => `<div>${k}</div><div>${v ?? '—'}</div>`).join('');
+  } catch (e) { $('#upd').innerHTML = `<span class="err">ошибка загрузки: ${esc(e.message)}</span>`; }
+}
+let hostsLoading = false;
+async function loadHosts() {
+  if (hostsLoading) return;
+  hostsLoading = true;
+  try {
+    const h = await fetch('api/v1/hosts').then(r => r.json());
+    hosts = h.data || [];
+    byIp = new Map(hosts.map(x => [x.ip, x]));
+    const keys = new Set(); hosts.forEach(x => Object.keys(x).forEach(k => k.startsWith('_') && keys.add(k)));
+    attrKeys = [...keys].sort();
+    renderGroupBy();
+    renderAll();
+  } catch (e) { $('#upd').innerHTML = `<span class="err">ошибка загрузки хостов: ${esc(e.message)}</span>`; }
+  hostsLoading = false;
+}
+// last events from server - log is filled right after opening of page
+async function loadEvents() {
+  try {
+    const r = await fetch('api/v1/events').then(r => r.json());
+    const seen = new Set(events.map(e => e.time + e.type + e.ip));
+    events = events.concat((r.data || []).filter(e => !seen.has(e.time + e.type + e.ip)))
+      .sort((a, b) => new Date(b.time) - new Date(a.time)).slice(0, MAX_EVENTS);
+    scheduleRender();
+  } catch (e) {}
+}
+
+// ---- UI ----
+function showTab(t) {
+  prefs.tab = t; savePrefs();
+  document.querySelectorAll('.tabs button').forEach(x => x.classList.toggle('on', x.dataset.tab === t));
+  ['hosts', 'groups', 'events', 'settings'].forEach(x => $('#tab-' + x).hidden = x !== t);
+  if (t === 'events') { unseen = 0; updateBadge(); }
+  renderAll();
+}
+const showHost = ip => { const h = byIp.get(ip); if (!h) return; const {_flash, ...data} = h; $('#dlgbody').textContent = JSON.stringify(data, null, 2); $('#dlg').showModal(); };
+document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => showTab(b.dataset.tab));
+$('#thead').onclick = e => { const k = e.target.dataset.k; if (!k) return; prefs.sortAsc = k === prefs.sortKey ? !prefs.sortAsc : true; prefs.sortKey = k; savePrefs(); renderHosts(); };
+$('#tbody').onclick = e => { const tr = e.target.closest('tr[data-ip]'); if (tr) showHost(tr.dataset.ip); };
+$('#hfilter').onclick = e => { if (e.target.id === 'hfclear') { prefs.hostFilter = null; savePrefs(); page = 0; renderHosts(); } };
+$('#gthead').onclick = e => {
+  const k = e.target.dataset.k; if (!k) return;
+  prefs.gSortAsc = k === prefs.gSortKey ? !prefs.gSortAsc : k === 'name';
+  prefs.gSortKey = k; savePrefs(); renderGroups();
+};
+$('#gbody').onclick = e => {
+  const o = e.target.closest('[data-open]');
+  if (o) { prefs.hostFilter = {by: prefs.groupBy, value: o.dataset.open}; prefs.fstatus = ''; $('#fstatus').value = ''; savePrefs(); page = 0; showTab('hosts'); return; }
+  const tr = e.target.closest('tr[data-ip]'); if (tr) return showHost(tr.dataset.ip);
+  const g = e.target.closest('tr.grp');
+  if (g) { const set = expandedSet(), k = g.dataset.g; set.has(k) ? set.delete(k) : set.add(k); setExpanded(set); renderGroups(); }
+};
+$('#chips').onclick = e => {
+  const c = e.target.closest('.chip'); if (!c) return;
+  if (c.dataset.more) { prefs.fstatus = 'transition'; $('#fstatus').value = 'transition'; savePrefs(); page = 0; showTab('hosts'); return; }
+  showHost(c.dataset.ip);
+};
+$('#log').onclick = e => { const l = e.target.closest('[data-ip]'); if (l) showHost(l.dataset.ip); };
+$('#logtrans').addEventListener('input', e => { prefs.logTrans = e.target.checked; savePrefs(); renderLog(); });
+$('#evbody').onclick = e => { const tr = e.target.closest('tr[data-ev]'); if (!tr) return; $('#dlgbody').textContent = JSON.stringify(events[+tr.dataset.ev], null, 2); $('#dlg').showModal(); };
+$('#q').addEventListener('input', () => { page = 0; renderHosts(); });
+$('#fstatus').addEventListener('input', e => { prefs.fstatus = e.target.value; savePrefs(); page = 0; renderHosts(); });
+$('#groupby').addEventListener('input', e => { prefs.groupBy = e.target.value; savePrefs(); gpage = 0; renderGroups(); });
+$('#gq').addEventListener('input', () => { gpage = 0; renderGroups(); });
+$('#gproblems').addEventListener('input', e => { prefs.gProblems = e.target.checked; savePrefs(); gpage = 0; renderGroups(); });
+$('#collapse').onclick = () => { setExpanded(new Set()); renderGroups(); };
+$('#evq').addEventListener('input', renderEvents);
+$('#evtype').addEventListener('input', e => { prefs.evtype = e.target.value; savePrefs(); renderEvents(); });
+$('#evclear').onclick = () => { events = []; renderAll(); };
+$('#prev').onclick = () => { page = Math.max(0, page - 1); renderHosts(); };
+$('#next').onclick = () => { page++; renderHosts(); };
+$('#gprev').onclick = () => { gpage = Math.max(0, gpage - 1); renderGroups(); };
+$('#gnext').onclick = () => { gpage++; renderGroups(); };
+
+$('#fstatus').value = prefs.fstatus; $('#evtype').value = prefs.evtype; $('#gproblems').checked = prefs.gProblems; $('#logtrans').checked = prefs.logTrans;
+renderGroupBy(); showTab(prefs.tab || 'hosts');
+fetch('api/v1/config').then(r => r.json()).then(c => $('#config').textContent = JSON.stringify(c, null, 2));
+loadSummary(); loadHosts(); loadEvents(); connect();
+setInterval(loadSummary, 10000);
+// without websocket - poll hosts
+setInterval(() => { if (!wsOnline) loadHosts(); }, 15000);
+</script>
+</body>
+</html>

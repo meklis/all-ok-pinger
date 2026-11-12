@@ -1,74 +1,85 @@
-system:
-#Какой таймаут делать между пингами
-  sleep_after_check: ${SLEEP_AFTER_CHECK:10s}
-#Идентификация пингера
-  pinger_ident: ${PINGER_IDENT:PINGER-UKRAINE}
-#Конфигурация логгера
-  logger:
-     console:
-        enabled: true
-        enable_color: false
-        log_level: ${LOG_LEVEL_INT:6}
+#Идентификатор пингера (передается в API как ?ident=)
+ident: ${PINGER_IDENT:PINGER}
+#Период циклов. Если цикл длится дольше - следующий начинается сразу. 0 - без пауз
+sleep_interval: ${SLEEP_INTERVAL:30s}
+
+log:
+  #debug, info, warn, error
+  level: ${LOG_LEVEL:info}
+  #text или json
+  format: ${LOG_FORMAT:text}
+
+api:
+  #Список хостов: {"data": [{"ip": "..", "status": 100|0|null, "target_group": "..", "_attr": ..}]}
+  host_list_url: ${API_HOST_LIST_URL:http://127.0.0.1:9099/api/v1/component/pinger/pinger}
+  #Период обновления списка хостов (в фоне)
+  host_list_refresh_interval: ${API_HOST_LIST_REFRESH_INTERVAL:5m}
+  #Игнорировать статусы из списка (как status: null) - используются статусы с прошлого прохода
+  ignore_host_list_statuses: ${API_IGNORE_HOST_LIST_STATUSES:false}
+  #Репорты: POST массива хостов с изменившимся статусом (ip, status, target_group, icmp, tcp, latency*, loss, _атрибуты)
+  report_url: ${API_REPORTS_URL:http://127.0.0.1:9099/api/v1/component/pinger/pinger}
+  report_enabled: ${API_REPORTS_ENABLED:true}
+  timeout: ${API_TIMEOUT:30s}
+
+#Статусы: 1-100 - up, процент полученных пакетов за цикл (100 - все ответы, даже за одну инспекцию), 0 - down, 999 - доступен только по TCP.
+#Репорт отправляется при любом изменении статуса, в том числе процента.
+#Хост, подтвердивший статус в инспекции, выбывает из цикла; остальные проверяются повторно.
+icmp:
+  #Максимум инспекций в цикле
+  inspections: ${ICMP_INSPECTIONS:10}
+  #up -> down: столько провальных инспекций подряд
+  failed_for_down: ${ICMP_FAILED_FOR_DOWN:10}
+  #down -> up: столько успешных инспекций подряд
+  success_for_up: ${ICMP_SUCCESS_FOR_UP:2}
+  #Пакетов на хост в инспекции (успешна, если пришел хотя бы один ответ)
+  packets: ${ICMP_PACKETS:4}
+  #Общий темп отправки, пакетов/с. 0 - без ограничения. Замеры на 55к хостов: до 20-30к/с потери не растут
+  packets_per_second: ${ICMP_PACKETS_PER_SECOND:15000}
+  #Ожидание ответов после отправки всех пакетов инспекции
+  response_timeout: ${ICMP_RESPONSE_TIMEOUT:2s}
+  #Пауза между инспекциями
+  inspection_interval: ${ICMP_INSPECTION_INTERVAL:3s}
+  ipv6: ${ICMP_IPV6:false}
+
+#TCP-проверка хостов, которые падают по ICMP
+tcp:
+  enabled: ${TCP_ENABLED:true}
+  ports: ${TCP_PORTS:[80]}
+  workers: ${TCP_WORKERS:50}
+  #Таймаут подключения к каждому порту
+  timeout: ${TCP_TIMEOUT:5s}
+
+#Реалтайм-состояния внутри цикла (API, дашборд, события redis). Статус фиксируется после всех инспекций
+realtime:
+  #up-хост "падает" (falling) после N провальных инспекций
+  falling_after_inspections: ${REALTIME_FALLING_AFTER_INSPECTIONS:3}
+  #down-хост "поднимается" (rising) после N успешных инспекций
+  rising_after_inspections: ${REALTIME_RISING_AFTER_INSPECTIONS:1}
+
+#Дашборд (/), API (/api/v1/...), метрики (/metrics)
+web:
+  listen: ${WEB_LISTEN::2112}
+  #Профилирование /debug/pprof/
+  pprof: ${WEB_PPROF:false}
 
 prometheus:
-  path: /metrics
-  enabled: true
-  port: 2112
+  enabled: ${PROMETHEUS_ENABLED:true}
+  #none | basic (status, up, icmp, loss, пакеты) | detailed (+ loss по окнам 1m/5m, tcp, циклы)
+  host_metrics: ${PROMETHEUS_HOST_METRICS:basic}
+  #none | avg (среднее за проход) | all (+ min/max/avg по окнам cycle/1m/5m)
+  latency_metrics: ${PROMETHEUS_LATENCY_METRICS:avg}
+  #info - атрибуты только в icmp_pinger_peer_info | all - лейблами на каждой метрике хоста
+  attribute_labels: ${PROMETHEUS_ATTRIBUTE_LABELS:all}
 
-#Конфигруция апи
-api:
-#Адрес получения списка на пинг
-  host_list_addr: ${API_HOST_LIST_URL:http://127.0.0.1:9099/api/v1/component/pinger/pinger}
-#Адрес отправки изменений
-  report_addr: ${API_REPORTS_URL:http://127.0.0.1:9099/api/v1/component/pinger/pinger}
-#Таймаут ожидания
-  request_timeout: ${API_TIMEOUT:30s}
-
-
-#Конфигурация библиотеки пингера
-pinger:
-  #Fast mode
-  fast_mode: no
-  #Приблизительное количество хостов(устанавливает размер хеша). Нужно брать с небольшим запасом, +1000 например
-  approximate_host_quantity: 30000
-  #Настройки ICMP проверки
-  icmp_check:
-    #Количество проходов
-    number_of_inspection: 3
-    #Количество успешных проходов(хост ответил на пинг нужным количеством пакетов за проход) и считается работающим
-    must_inspections_success_for_up: 2
-    #Количество неуспешных проходов(хост НЕ ответил на пинг нужным количеством пакетов за проход) и считается упавшим
-    must_inspections_failed_for_down: 1
-    #Количество воркеров, читающих ответы
-    count_listeners: 4
-    #Количество воркеров, генерирующие пакеты
-    count_writers: 2
-    #Работать с IPv6 хостами (будет открыт еще один сокет)
-    enable_ipv6: no
-    #Ожидание задержавшихся ответов после отправки всех пакетов
-    response_timeout: 2s
-    #Задержка между проходами
-    inspection_timeout: 100ms
-    #Количество пакетов на хост при проходе инспекции. Принцип работы аналогичен fping
-    #Рекомендуется не изменять данный  параметр, если нет проблем с блокировками за флуд
-    count_packages_to_host: 5
-    #Рекомендуется не изменять данный  параметр, если нет проблем с блокировками за флуд
-    #Необходимое количетво полученных пакетов для учета хоста в обходе как успешного
-    must_packages_for_up: 2
-    #Рекомендуется не изменять данный  параметр, если нет проблем с блокировками за флуд
-    #Время задержки отправки пакета на хост
-    time_duration_to_send: 7000ns
-  tcp_check:
-    #Включена
-    enabled: yes
-    #Список портов на проверку. Задержка проверки высчитывается по count(ports)*connect_timeout, соответственно 4 порта *3s = 12s ожидания
-    ports:
-      - 80
-    #Количество обработчиков TCP подключений
-    count_workers: 50
-    #Время ожидания на установку подключения
-    connect_timeout: 5s
-
-
-
-
+#События и репорты в redis pub/sub (PUBLISH <канал> <json>)
+redis:
+  enabled: ${REDIS_ENABLED:false}
+  addr: ${REDIS_ADDR:127.0.0.1:6379}
+  password: ${REDIS_PASSWORD:}
+  db: ${REDIS_DB:0}
+  #Канал событий (status_changed, falling, rising, *_cancelled, host_added, host_removed). Пусто - не отправлять
+  events_key: ${REDIS_EVENTS_KEY:pinger:events}
+  #Канал репортов. Пусто - не отправлять
+  reports_key: ${REDIS_REPORTS_KEY:pinger:reports}
+  #Очередь отправки, при переполнении сообщения отбрасываются
+  queue_size: ${REDIS_QUEUE_SIZE:100000}

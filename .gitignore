@@ -1,2 +1,4 @@
 .idea
 helpprovider-gopinger
+/pkg/
+/icmp-pinger

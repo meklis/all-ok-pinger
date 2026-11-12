@@ -1,22 +1,27 @@
 package pinger
 
 import (
-	"fmt"
 	"net"
+	"strconv"
 )
 
 func (c *Pinger) checkingByTCP() {
-	for {
-		dev := <-c.chanTcpReq
+	for h := range c.chanTcpReq {
+		ok := false
 		for _, port := range c.Config.TCP.Ports {
-			conn, err := net.DialTimeout("tcp", fmt.Sprintf("%v:%v", dev.Ip, port), c.Config.TCP.ConnectionTimeout)
-			if err == nil {
-				conn.Close()
-				c.setTCPResp(dev.Ip)
-				break
-			} else if conn != nil {
+			conn, err := net.DialTimeout("tcp", net.JoinHostPort(h.key, strconv.Itoa(port)), c.Config.TCP.Timeout)
+			if conn != nil {
 				conn.Close()
 			}
+			if err == nil {
+				ok = true
+				break
+			}
 		}
+		c.mu.Lock()
+		h.tcpChecked = true
+		h.tcpOk = ok
+		c.mu.Unlock()
+		c.tcpWg.Done()
 	}
 }

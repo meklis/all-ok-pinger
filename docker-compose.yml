@@ -1,0 +1,11 @@
+
+
+services:
+  go-icmp-pinger:
+    build: ./
+    ports:
+      - "2115:2112"
+    environment:
+      - "API_HOST_LIST_URL=https://cr1.triolan.com.ua/pinger/get-hosts"
+      - "API_REPORTS_URL=https://cr1.triolan.com.ua/pinger/update"
+      - "LOG_LEVEL=debug"
