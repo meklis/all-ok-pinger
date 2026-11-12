@@ -1,9 +1,16 @@
 FROM golang:1.22 AS builder
 
+# set by CI from git tag, defaults from main/main.go are used if empty
+ARG VERSION
+ARG BUILD_DATE
+
 WORKDIR /app
 COPY . .
 
-RUN CGO_ENABLED=0 go build -trimpath -o icmp-pinger ./main/main.go
+RUN LDFLAGS="-s -w"; \
+    if [ -n "$VERSION" ]; then LDFLAGS="$LDFLAGS -X main.VERSION=$VERSION"; fi; \
+    if [ -n "$BUILD_DATE" ]; then LDFLAGS="$LDFLAGS -X main.BUILD_DATE=$BUILD_DATE"; fi; \
+    CGO_ENABLED=0 go build -trimpath -ldflags "$LDFLAGS" -o icmp-pinger ./main
 
 FROM debian:bullseye-slim
 

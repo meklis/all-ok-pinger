@@ -29,7 +29,8 @@ var (
 	lg         *logrus.Logger
 )
 
-const (
+// set on build: -ldflags "-X main.VERSION=... -X main.BUILD_DATE=..."
+var (
 	VERSION    = "1.0.0"
 	BUILD_DATE = "2026-11-11"
 )
