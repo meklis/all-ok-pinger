@@ -89,6 +89,9 @@ POST `api.report_url?ident=<ident>` — массив хостов с измен�
    "pending":{"state":"falling","failed_inspections":2,...},"host":{...объект репорта...}}
   ```
 * `reports_key` — канал репортов по изменившимся хостам за цикл: `{"type":"report","ident":..,"time":..,"count":..,"items":[...]}`.
+* `announce_key` — регистрация пингера для дискавери (например, аггрегатором): каждые `announce_interval` пингер пишет
+  `SET <announce_key>:<ident> {"ident","url","hostname","version","build_date","started_at","updated_at"} EX <announce_ttl>`,
+  при остановке (SIGTERM) ключ удаляется. `url` — `public_url` или `http://<локальный IP, с которого виден redis>:<порт web.listen>`.
 
 ## Веб-сервер (`web.listen`, по умолчанию `:2112`)
 

@@ -27,6 +27,12 @@ type Config struct {
 	EventsKey  string `yaml:"events_key"`
 	ReportsKey string `yaml:"reports_key"`
 	QueueSize  int    `yaml:"queue_size"`
+	// AnnounceKey - prefix of registration key of pinger (<key>:<ident>) for discovery by aggregator. Empty - disabled
+	AnnounceKey      string        `yaml:"announce_key"`
+	AnnounceInterval time.Duration `yaml:"announce_interval"`
+	AnnounceTTL      time.Duration `yaml:"announce_ttl"`
+	// PublicURL - URL of web API of this pinger in registration. Empty - detected automatically
+	PublicURL string `yaml:"public_url"`
 }
 
 type message struct {

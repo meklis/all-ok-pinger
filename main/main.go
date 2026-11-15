@@ -1,13 +1,16 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"log"
 	"net/http"
 	"net/url"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 	"time"
 
 	api_module "github.com/meklis/all-ok-pinger/api"
@@ -31,7 +34,7 @@ var (
 
 // set on build: -ldflags "-X main.VERSION=... -X main.BUILD_DATE=..."
 var (
-	VERSION    = "1.0.0"
+	VERSION    = "1.1.0"
 	BUILD_DATE = "2026-11-11"
 )
 
@@ -130,6 +133,7 @@ func main() {
 			lg.Fatalf("Error in redis configuration: %v", err)
 		}
 		store.OnEvent(publisher.Event)
+		announce(publisher)
 	}
 
 	api := api_module.NewApi(api_module.Configuration{
@@ -407,4 +411,32 @@ func InitializeLogger() {
 	if lg.IsLevelEnabled(logrus.DebugLevel) {
 		lg.SetReportCaller(true)
 	}
+}
+
+// announce - registration of pinger in redis for discovery by aggregator. On SIGTERM/SIGINT registration is removed
+func announce(publisher *events.Publisher) {
+	if Config.Redis.AnnounceKey == "" {
+		return
+	}
+	pubURL := Config.Redis.PublicURL
+	if pubURL == "" {
+		var err error
+		if pubURL, err = events.DetectURL(Config.Redis.Addr, Config.Web.Listen); err != nil {
+			lg.Errorf("Pinger is not announced in redis: %v", err)
+			return
+		}
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	publisher.StartAnnounce(ctx, events.Instance{
+		URL: strings.TrimRight(pubURL, "/"), Version: VERSION, BuildDate: BUILD_DATE, StartedAt: time.Now(),
+	})
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		s := <-sig
+		lg.Infof("Received %v, removing registration from redis", s)
+		cancel()
+		time.Sleep(time.Second)
+		os.Exit(0)
+	}()
 }

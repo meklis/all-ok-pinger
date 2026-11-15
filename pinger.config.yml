@@ -83,3 +83,10 @@ redis:
   reports_key: ${REDIS_REPORTS_KEY:pinger:reports}
   #Очередь отправки, при переполнении сообщения отбрасываются
   queue_size: ${REDIS_QUEUE_SIZE:100000}
+  #Регистрация пингера для дискавери аггрегатором: SET <announce_key>:<ident> {ident,url,version,...} EX announce_ttl
+  #каждые announce_interval, при остановке ключ удаляется. Пусто - не регистрироваться
+  announce_key: ${REDIS_ANNOUNCE_KEY:pinger:instances}
+  announce_interval: ${REDIS_ANNOUNCE_INTERVAL:10s}
+  announce_ttl: ${REDIS_ANNOUNCE_TTL:30s}
+  #URL веб-API пингера в регистрации. Пусто - http://<локальный IP в сторону redis>:<порт web.listen>
+  public_url: ${PINGER_PUBLIC_URL:}
