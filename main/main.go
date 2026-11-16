@@ -34,8 +34,8 @@ var (
 
 // set on build: -ldflags "-X main.VERSION=... -X main.BUILD_DATE=..."
 var (
-	VERSION    = "1.1.0"
-	BUILD_DATE = "2026-11-11"
+	VERSION    = "1.1.1"
+	BUILD_DATE = "2026-11-16"
 )
 
 func init() {

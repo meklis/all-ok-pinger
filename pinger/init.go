@@ -237,18 +237,35 @@ func (c *Pinger) StartPing(data []Device) []Result {
 	}
 	c.mu.Unlock()
 
-	if c.Config.TCP.Enabled && len(c.Config.TCP.Ports) > 0 && len(forDown) > 0 {
-		c.lg.Debugf("TCP checking of %v hosts", len(forDown))
+	switch {
+	case len(forDown) == 0:
+	case c.Config.TCP.Enabled && len(c.Config.TCP.Ports) > 0:
+		tcp := c.Config.TCP
+		c.lg.Infof("TCP check started: %v hosts not responding over ICMP (ports %v, workers %v, timeout %v)",
+			len(forDown), tcp.Ports, tcp.Workers, tcp.Timeout)
+		tcpStart := time.Now()
 		c.tcpWg.Add(len(forDown))
 		for _, h := range forDown {
 			c.chanTcpReq <- h
 		}
 		c.tcpWg.Wait()
+		ok := 0
+		c.mu.Lock()
+		for _, h := range forDown {
+			if h.tcpOk {
+				ok++
+			}
+		}
+		c.mu.Unlock()
+		c.lg.Infof("TCP check finished in %v: %v of %v hosts accept TCP (status %v), %v down",
+			time.Since(tcpStart).Round(time.Millisecond), ok, len(forDown), StatusTcpUp, len(forDown)-ok)
+	default:
+		c.lg.Infof("%v hosts not responding over ICMP, TCP check is disabled - down", len(forDown))
 	}
 
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	up, down := 0, 0
+	var total, up, down, tcpUp, rose, fell, fellTcp, loss, other, unknown int
 	for i := range results {
 		h := byIndex[i]
 		if h == nil {
@@ -283,13 +300,39 @@ func (c *Pinger) StartPing(data []Device) []Result {
 		}
 		r.Status = &status
 		r.Changed = r.Device.Status == nil || *r.Device.Status != status
-		if r.Changed && status > 0 {
-			up++
-		} else if r.Changed {
+
+		total++
+		switch status {
+		case StatusDown:
 			down++
+		case StatusTcpUp:
+			tcpUp++
+		default:
+			up++
+		}
+		prev := r.Device.Status
+		wasUp := prev != nil && *prev > 0 && *prev != StatusTcpUp
+		isUp := status > 0 && status != StatusTcpUp
+		switch {
+		case !r.Changed:
+		case prev == nil:
+			unknown++
+		case wasUp && !isUp:
+			fell++
+			if status == StatusTcpUp {
+				fellTcp++
+			}
+		case !wasUp && isUp:
+			rose++
+		case wasUp && isUp:
+			loss++
+		default:
+			// 0 <-> 999
+			other++
 		}
 	}
-	c.lg.Infof("ICMP cycle finished: up=%v, down=%v (changed statuses)", up, down)
+	c.lg.Infof("Cycle result: %v hosts - up %v, down %v, tcp only %v | changes: fell %v (tcp only %v), rose %v, loss changed %v, down/tcp only %v, first status %v",
+		total, up, down, tcpUp, fell, fellTcp, rose, loss, other, unknown)
 	// cycle finished, late responses are ignored
 	c.cycleID++
 	c.hosts = map[string]*hostCycle{}
